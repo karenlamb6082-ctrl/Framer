@@ -10,8 +10,11 @@ const state = {
   items: [],        // { id, img, thumb, config: { ... } }
   activeIndex: -1,
   isDragging: false,
-  drag: { x: 0, y: 0, ox: 0, oy: 0 }
+  drag: { x: 0, y: 0, ox: 0, oy: 0 },
+  history: [],      // 撤销栈: [{ activeIndex, config }]
 };
+
+const MAX_HISTORY = 40; // 最多保存40步
 
 // 预设边框初始颜色
 const BORDER_DEFAULTS = {
@@ -46,6 +49,7 @@ const els = {
   thumbStrip:   document.getElementById('thumbnailStrip'),
   batchActions: document.getElementById('batchActions'),
   btnDownload:  document.getElementById('btnDownload'),
+  btnUndo:      document.getElementById('btnUndo'),
   btnSyncAll:   document.getElementById('btnSyncAll'),
   btnDownloadAll: document.getElementById('btnDownloadAll'),
   // Controls - 使用父容器做事件委托，避免静态 NodeList 导致新增按钮失效
@@ -102,6 +106,14 @@ function init() {
     if (state.isDragging) { e.preventDefault(); doDrag(e.touches[0]); }
   }, { passive: false });
   window.addEventListener('touchend', stopDrag);
+
+  // Ctrl+Z 撤销快捷键
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      undo();
+    }
+  });
 
   bindControlEvents();
 }
@@ -169,6 +181,7 @@ function bindControlEvents() {
   };
 
   // 批量操作
+  els.btnUndo.onclick = undo;
   els.btnSyncAll.onclick = syncAllConfigs;
   els.btnDownloadAll.onclick = batchDownload;
   els.btnDownload.onclick = () => downloadOne(getActiveItem());
@@ -256,7 +269,41 @@ const getActiveItem = () => state.items[state.activeIndex];
 
 function updateActiveConfig(patch) {
   const item = getActiveItem();
-  if (item) item.config = { ...item.config, ...patch };
+  if (!item) return;
+  // 推入撤销历史（保存变更前的快照）
+  pushHistory();
+  item.config = { ...item.config, ...patch };
+}
+
+/**
+ * 推入历史快照
+ */
+function pushHistory() {
+  const item = getActiveItem();
+  if (!item) return;
+  state.history.push({
+    activeIndex: state.activeIndex,
+    config: { ...item.config }
+  });
+  if (state.history.length > MAX_HISTORY) state.history.shift();
+  els.btnUndo.disabled = false;
+}
+
+/**
+ * 撤销：恢复上一步配置
+ */
+function undo() {
+  if (!state.history.length) return;
+  const snapshot = state.history.pop();
+  const item = state.items[snapshot.activeIndex];
+  if (item) {
+    item.config = snapshot.config;
+    state.activeIndex = snapshot.activeIndex;
+    renderThumbnails();
+    syncUI();
+    scheduleRender();
+  }
+  els.btnUndo.disabled = state.history.length === 0;
 }
 
 function syncUI() {
@@ -294,15 +341,53 @@ function renderThumbnails() {
   state.items.forEach((item, index) => {
     const div = document.createElement('div');
     div.className = `thumb-item ${index === state.activeIndex ? 'active' : ''}`;
-    div.innerHTML = `<img src="${item.thumb}">`;
-    div.onclick = () => {
+    div.innerHTML = `<img src="${item.thumb}"><button class="thumb-delete" title="删除此图">×</button>`;
+    // 点击缩略图切换
+    div.onclick = (e) => {
+      if (e.target.classList.contains('thumb-delete')) return; // 不拦截删除按钮
       state.activeIndex = index;
       renderThumbnails();
       syncUI();
       scheduleRender();
     };
+    // 删除按钮
+    div.querySelector('.thumb-delete').onclick = (e) => {
+      e.stopPropagation();
+      deleteItem(index);
+    };
     els.thumbStrip.appendChild(div);
   });
+}
+
+/**
+ * 删除指定索引的照片
+ */
+function deleteItem(index) {
+  if (index < 0 || index >= state.items.length) return;
+  state.items.splice(index, 1);
+  
+  // 处理 activeIndex
+  if (state.items.length === 0) {
+    // 全部删完，回到上传界面
+    state.activeIndex = -1;
+    state.history = [];
+    els.uploadZone.hidden = false;
+    els.canvasWrap.hidden = true;
+    els.batchActions.hidden = true;
+    els.btnDownload.disabled = true;
+    return;
+  }
+  
+  if (state.activeIndex >= state.items.length) {
+    state.activeIndex = state.items.length - 1;
+  } else if (state.activeIndex > index) {
+    state.activeIndex--;
+  }
+  // activeIndex 等于被删的 index 时不需要移动，自然指向下一张
+  
+  renderThumbnails();
+  syncUI();
+  scheduleRender();
 }
 
 // ================================
