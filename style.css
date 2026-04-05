@@ -371,6 +371,11 @@ body {
 .btn-undo:hover { background: var(--surface-3); color: var(--text-primary); border-color: var(--accent); }
 .btn-undo:disabled { opacity: 0.3; cursor: not-allowed; }
 
+.header-divider {
+  width: 1px; height: 24px;
+  background: var(--border); margin: 0 4px;
+}
+
 @media (max-width: 1000px) {
   .workspace { grid-template-columns: 1fr; }
   /* 移动端：预览区在上，控制区在下 */
@@ -387,10 +392,16 @@ body {
 .btn-collage {
   background: linear-gradient(135deg, var(--accent), #a78bfa);
   color: #fff; border: none; border-radius: var(--radius-sm);
-  padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  padding: 8px 20px; font-size: 14px; font-weight: 700; cursor: pointer;
   transition: all var(--transition);
+  letter-spacing: 0.5px;
+  animation: collage-pulse 2.5s ease-in-out infinite;
 }
-.btn-collage:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(124,107,255,0.4); }
+@keyframes collage-pulse {
+  0%, 100% { box-shadow: 0 2px 8px rgba(124,107,255,0.3); }
+  50% { box-shadow: 0 4px 20px rgba(124,107,255,0.6); }
+}
+.btn-collage:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(124,107,255,0.5); animation: none; }
 .btn-collage.active {
   background: #fff; color: var(--accent);
   box-shadow: 0 0 0 2px var(--accent);
