@@ -377,14 +377,35 @@ body {
     order: 5;
   }
 
-  /* 预览面板 */
+  /* 预览面板 — 移动端 sticky 紧凑预览 */
   .preview-panel {
-    min-height: 300px;
-    position: relative; /* 移动端取消 sticky */
-    top: auto;
-    border-radius: var(--radius-lg);
+    min-height: 0;
+    max-height: 280px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    border-radius: var(--radius-md);
+    overflow: hidden;
   }
-  .canvas-wrap { padding: 16px 12px 12px; }
+  .canvas-wrap {
+    padding: 10px 10px 6px;
+    min-height: 0;
+  }
+  .canvas-wrap canvas {
+    max-height: 200px !important;
+    width: auto !important;
+  }
+  .upload-zone {
+    min-height: 280px;
+    padding: 40px 20px;
+  }
+  .upload-icon { font-size: 36px; }
+  .upload-title { font-size: 15px; }
+  .upload-hint { font-size: 12px; }
+  /* 缩略图条紧凑 */
+  .thumbnail-outer { padding-top: 6px; }
+  .thumb-item { width: 40px; height: 40px; }
+  .btn-reupload { font-size: 11px; padding: 4px 10px; top: 8px; right: 8px; }
 
   /* 控制面板 */
   .main { padding: 16px 12px; }
