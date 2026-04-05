@@ -850,17 +850,34 @@ function render() {
   ctx.drawImage(renderImg, drawX, drawY, drawnW, drawnH);
   ctx.restore();
 
-  // 4.5极简质感隔离缝隙线 (Inner Stroke)
+  // 4.5极简画廊卡纸装裱缝隙 (V-Groove / Float Mount)
   if (cfg.photoStrokeOn && cfg.photoStrokeWidth > 0) {
     ctx.save();
-    // 动态换算防缩水线宽：当图片导出分辨率长边达 3000px 时，按千分比等比例放大线宽，保证绝不消失。
+    // 1. 降低线条的生硬度：线宽应该非常克制，即便推到最大也不应变成粗框
     const dynamicBase = Math.max(canvasW, canvasH);
-    const lw = Math.max(1, Math.round(dynamicBase * cfg.photoStrokeWidth / 1000));
+    const lw = Math.max(1, Math.round(dynamicBase * cfg.photoStrokeWidth / 4000));
+    
+    // 2. 赋予物理空间感 (呼吸留白)：线条不应像贴纸一样锁死在照片边缘，而是离开边缘一段距离（V型槽工艺）
+    const gap = Math.max(4, Math.round(dynamicBase * 0.008)); // 例如在 3000px 画布上产生 24px 的呼吸缝
+    
+    // 3. 压暗透明度，拒绝强烈的刺眼感：无论用户选择多亮的颜色，强制叠加一次全局透明度，使其融入底色
+    ctx.globalAlpha = 0.35; 
     
     ctx.strokeStyle = cfg.photoStrokeColor;
     ctx.lineWidth = lw;
-    roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
+    
+    // 绘制在外围
+    const outR = pR > 0 ? pR + gap : 0;
+    roundRectPath(ctx, drawX - gap, drawY - gap, drawnW + gap * 2, drawnH + gap * 2, outR);
     ctx.stroke();
+
+    // 加强一层极弱的内层反光（增加立体的纸板割切厚度感），这让它终于看起来不再是“画上去的一条线”，而是“刻下去的一道缝”
+    ctx.globalAlpha = 0.15;
+    ctx.lineWidth = Math.max(1, lw * 0.5);
+    ctx.strokeStyle = cfg.photoStrokeColor === 'rgba(0,0,0,0.5)' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,1)';
+    roundRectPath(ctx, drawX - gap + lw/2, drawY - gap + lw/2, drawnW + gap * 2 - lw, drawnH + gap * 2 - lw, Math.max(0, outR - lw/2));
+    ctx.stroke();
+
     ctx.restore();
   }
 
