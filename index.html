@@ -178,27 +178,15 @@
           <div class="frame-grid" id="frameGrid">
             <button class="frame-item active" data-frame="white">
               <div class="frame-thumb frame-thumb--white"><div class="frame-thumb-inner"></div></div>
-              <span>系统白</span>
+              <span>画廊极简白</span>
             </button>
             <button class="frame-item" data-frame="black">
               <div class="frame-thumb frame-thumb--black"><div class="frame-thumb-inner"></div></div>
-              <span>纯粹黑</span>
+              <span>电影暗调黑</span>
             </button>
             <button class="frame-item" data-frame="museum">
               <div class="frame-thumb frame-thumb--museum"><div class="frame-thumb-inner"></div></div>
-              <span>博物馆</span>
-            </button>
-            <button class="frame-item" data-frame="polaroid">
-              <div class="frame-thumb frame-thumb--polaroid"><div class="frame-thumb-inner"></div></div>
-              <span>拍立得</span>
-            </button>
-            <button class="frame-item" data-frame="film">
-              <div class="frame-thumb frame-thumb--film"><div class="frame-thumb-inner"></div></div>
-              <span>胶片感</span>
-            </button>
-            <button class="frame-item" data-frame="float">
-              <div class="frame-thumb frame-thumb--float"><div class="frame-thumb-inner"></div></div>
-              <span>极简浮空</span>
+              <span>美术馆留白</span>
             </button>
             <button class="frame-item" data-frame="none">
               <div class="frame-thumb frame-thumb--none"><div class="frame-thumb-inner"></div></div>
@@ -209,7 +197,7 @@
           <div class="sub-label">边框宽度</div>
           <div class="slider-row">
             <span class="slider-label">细</span>
-            <input type="range" class="slider" id="frameWidth" min="0" max="30" value="6">
+            <input type="range" class="slider" id="frameWidth" min="0" max="85" value="6">
             <span class="slider-val" id="widthVal">6%</span>
             <span class="slider-label">粗</span>
           </div>
@@ -254,34 +242,24 @@
           <div class="drag-hint">✨ 拖动照片微调构图 · 快捷键: ←→切换 · +−缩放 · Del删除</div>
         </section>
 
-        <!-- 4. 滤镜效果 -->
+        <!-- 4. 质感与特效 -->
         <section class="panel-section">
-          <h3 class="panel-title">滤镜效果</h3>
-          <div class="filter-grid" id="filterGrid">
-            <button class="filter-item active" data-filter="none">
-              <div class="filter-preview"></div><span>原图</span>
-            </button>
-            <button class="filter-item" data-filter="grayscale">
-              <div class="filter-preview filter-pre--bw"></div><span>黑白</span>
-            </button>
-            <button class="filter-item" data-filter="sepia">
-              <div class="filter-preview filter-pre--sepia"></div><span>复古</span>
-            </button>
-            <button class="filter-item" data-filter="warm">
-              <div class="filter-preview filter-pre--warm"></div><span>暖色</span>
-            </button>
-            <button class="filter-item" data-filter="cool">
-              <div class="filter-preview filter-pre--cool"></div><span>冷色</span>
-            </button>
-            <button class="filter-item" data-filter="fade">
-              <div class="filter-preview filter-pre--fade"></div><span>褪色</span>
-            </button>
+          <h3 class="panel-title">质感与特效</h3>
+          <div class="sub-label">隔离缝隙 (Inner Border)</div>
+          <div class="shadow-row">
+            <button class="toggle-btn" id="strokeToggle">关 闭</button>
+            <div class="slider-row flex-1 shadow-slider-disabled" id="strokeSliderWrap">
+              <span class="slider-label">细</span>
+              <input type="range" class="slider" id="strokeWidth" min="1" max="15" value="2">
+              <span class="slider-label">粗</span>
+            </div>
           </div>
-        </section>
+          <div class="export-row" style="margin-top: 8px;" id="strokeColorOptions" hidden>
+            <button class="export-fmt active" data-scolor="rgba(255,255,255,0.7)" id="scolorWhite">亮边 (适合暗背景)</button>
+            <button class="export-fmt" data-scolor="rgba(0,0,0,0.5)" id="scolorBlack">暗边 (适合亮背景)</button>
+          </div>
 
-        <!-- 4. 边缘阴影 -->
-        <section class="panel-section">
-          <h3 class="panel-title">装饰效果</h3>
+          <div class="sub-label" style="margin-top: 16px;">镜头暗角 (Vignette)</div>
           <div class="shadow-row">
             <button class="toggle-btn" id="shadowToggle">关 闭</button>
             <div class="slider-row flex-1 shadow-slider-disabled" id="shadowSliderWrap">
@@ -290,7 +268,6 @@
               <span class="slider-label">强</span>
             </div>
           </div>
-          <div class="sub-label" style="margin-top: 10px;">边缘晕影强度</div>
         </section>
 
         <!-- 5. 水印/文字 -->

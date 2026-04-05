@@ -62,26 +62,15 @@ const COLLAGE_LAYOUTS = {
   }
 };
 
-// 滤镜映射表
-const FILTERS = {
-  none:      'none',
-  grayscale: 'grayscale(100%)',
-  sepia:     'sepia(80%) saturate(120%)',
-  warm:      'sepia(25%) saturate(140%) hue-rotate(-10deg)',
-  cool:      'saturate(80%) hue-rotate(20deg) brightness(1.05)',
-  fade:      'saturate(50%) contrast(85%) brightness(1.1)',
-};
-
-// 预设边框初始颜色
+// 极简高定风格预设初始颜色
 const BORDER_DEFAULTS = {
-  white: '#ffffff', black: '#1a1a1a', museum: '#ffffff',
-  polaroid: '#ffffff', film: '#111111', float: '#f9f9f9', none: '#ffffff'
+  white: '#ffffff', black: '#000000', museum: '#fafafa', none: '#ffffff'
 };
 
 // 默认配置生成器
 const createDefaultConfig = (frame = 'white') => ({
   frameType:    frame,
-  frameWidth:   6,
+  frameWidth:   10,
   frameColor:   BORDER_DEFAULTS[frame],
   gradientOn:   false,
   gradientColor2: '#f5f0e8',
@@ -92,11 +81,13 @@ const createDefaultConfig = (frame = 'white') => ({
   photoOffsetY: 0,
   shadowOn:     false,
   shadowIntensity: 6,
-  filter:       'none',
+  photoStrokeOn: true,
+  photoStrokeWidth: 1,
+  photoStrokeColor: 'rgba(255,255,255,0.7)',
   watermarkOn:  false,
   watermarkText: '',
-  watermarkPos: 'bottomRight',
-  watermarkSize: 24,
+  watermarkPos: 'center',
+  watermarkSize: 20,
   watermarkColor: 'white',
 });
 
@@ -121,7 +112,10 @@ const els = {
   // Controls
   ratioGrid:    document.getElementById('ratioGrid'),
   frameGrid:    document.getElementById('frameGrid'),
-  filterGrid:   document.getElementById('filterGrid'),
+  strokeToggle: document.getElementById('strokeToggle'),
+  strokeWidth:  document.getElementById('strokeWidth'),
+  strokeSliderWrap: document.getElementById('strokeSliderWrap'),
+  strokeColorOptions: document.getElementById('strokeColorOptions'),
   frameWidth:   document.getElementById('frameWidth'),
   widthVal:     document.getElementById('widthVal'),
   colorSwatches: document.querySelectorAll('.color-swatch'),
@@ -293,13 +287,29 @@ function bindControlEvents() {
     syncUI(); scheduleRender();
   };
 
-  // 滤镜 — 事件委托
-  els.filterGrid.addEventListener('click', (e) => {
-    const btn = e.target.closest('.filter-item');
-    if (!btn) return;
-    updateActiveConfig({ filter: btn.dataset.filter });
+  // 极简照片隔离缝隙线
+  els.strokeToggle.onclick = () => {
+    const item = getActiveItem();
+    if (!item) return;
+    updateActiveConfig({ photoStrokeOn: !item.config.photoStrokeOn });
     syncUI(); scheduleRender();
-  });
+  };
+  els.strokeWidth.oninput = (e) => {
+    updateActiveConfig({ photoStrokeWidth: parseInt(e.target.value) });
+    scheduleRender();
+  };
+  document.getElementById('scolorWhite').onclick = () => {
+    updateActiveConfig({ photoStrokeColor: 'rgba(255,255,255,0.7)' });
+    document.getElementById('scolorWhite').classList.add('active');
+    document.getElementById('scolorBlack').classList.remove('active');
+    scheduleRender();
+  };
+  document.getElementById('scolorBlack').onclick = () => {
+    updateActiveConfig({ photoStrokeColor: 'rgba(0,0,0,0.5)' });
+    document.getElementById('scolorBlack').classList.add('active');
+    document.getElementById('scolorWhite').classList.remove('active');
+    scheduleRender();
+  };
 
   // 导出格式
   els.fmtPng.onclick = () => {
@@ -652,10 +662,15 @@ function syncUI() {
   els.shadowToggle.textContent = cfg.shadowOn ? '开 启' : '关 闭';
   els.shadowToggle.classList.toggle('on', cfg.shadowOn);
   els.shadowWrap.classList.toggle('shadow-slider-disabled', !cfg.shadowOn);
-  // 滤镜
-  els.filterGrid.querySelectorAll('.filter-item').forEach(el =>
-    el.classList.toggle('active', el.dataset.filter === cfg.filter)
-  );
+  // 隔离线
+  els.strokeToggle.textContent = cfg.photoStrokeOn ? '开 启' : '关 闭';
+  els.strokeToggle.classList.toggle('on', cfg.photoStrokeOn);
+  els.strokeSliderWrap.classList.toggle('shadow-slider-disabled', !cfg.photoStrokeOn);
+  els.strokeColorOptions.hidden = !cfg.photoStrokeOn;
+  els.strokeWidth.value = cfg.photoStrokeWidth || 1;
+  const isBlack = cfg.photoStrokeColor === 'rgba(0,0,0,0.5)';
+  document.getElementById('scolorBlack').classList.toggle('active', isBlack);
+  document.getElementById('scolorWhite').classList.toggle('active', !isBlack);
   // 渐变
   els.gradientToggle.classList.toggle('on', cfg.gradientOn);
   els.gradientToggle.textContent = cfg.gradientOn ? '渐变 开' : '渐变';
@@ -832,12 +847,19 @@ function render() {
   ctx.save();
   roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
   ctx.clip();
-  // 应用滤镜
-  const filterStr = FILTERS[cfg.filter] || 'none';
-  if (filterStr !== 'none') ctx.filter = filterStr;
   ctx.drawImage(renderImg, drawX, drawY, drawnW, drawnH);
-  ctx.filter = 'none'; // 重置，避免影响后续装饰层
   ctx.restore();
+
+  // 4.5极简质感隔离缝隙线 (Inner Stroke)
+  if (cfg.photoStrokeOn && cfg.photoStrokeWidth > 0) {
+    ctx.save();
+    const lw = cfg.photoStrokeWidth;
+    ctx.strokeStyle = cfg.photoStrokeColor;
+    ctx.lineWidth = lw;
+    roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   // 5. 装饰层：Museum 艺术装裱增强（增加卡纸凹陷感）
   if (cfg.frameType === 'museum' && bT > 0) {
@@ -877,7 +899,7 @@ function render() {
 
   // 9. 水印文字
   if (cfg.watermarkOn && cfg.watermarkText) {
-    drawWatermark(ctx, cfg, canvasW, canvasH, bT, bB, bL, bR);
+    drawWatermark(ctx, cfg, canvasW, canvasH, bT, bB, bL, bR, drawY, drawnH);
   }
 
   fitDisplay();
@@ -969,9 +991,10 @@ function drawVignette(ctx, x, y, w, h, r, intensity) {
   const cx = x + w / 2;
   const cy = y + h / 2;
   const maxR = Math.sqrt(w ** 2 + h ** 2) / 2;
-  const alpha = intensity * 0.05;
-  const grad = ctx.createRadialGradient(cx, cy, maxR * 0.3, cx, cy, maxR);
+  const alpha = intensity * 0.08;
+  const grad = ctx.createRadialGradient(cx, cy, maxR * 0.35, cx, cy, maxR * 1.05);
   grad.addColorStop(0, 'rgba(0,0,0,0)');
+  grad.addColorStop(0.5, `rgba(0,0,0,${alpha * 0.25})`);
   grad.addColorStop(1, `rgba(0,0,0,${alpha})`);
   ctx.save();
   roundRectPath(ctx, x, y, w, h, r);
@@ -996,38 +1019,40 @@ function drawGrid(ctx, x, y, w, h) {
   ctx.restore();
 }
 
-function drawWatermark(ctx, cfg, canvasW, canvasH, bT, bB, bL, bR) {
+function drawWatermark(ctx, cfg, canvasW, canvasH, bT, bB, bL, bR, drawY, drawnH) {
   const fontSize = Math.round(canvasW * cfg.watermarkSize / 1000);
   ctx.save();
   ctx.font = `${fontSize}px 'Inter', sans-serif`;
   ctx.fillStyle = cfg.watermarkColor === 'white' 
-    ? 'rgba(255,255,255,0.6)' 
+    ? 'rgba(255,255,255,0.7)' 
     : 'rgba(0,0,0,0.5)';
   ctx.textBaseline = 'middle';
   
   const text = cfg.watermarkText;
-  const metrics = ctx.measureText(text);
   const pad = fontSize * 0.8;
   let x, y;
+  
+  // 底部留白区域的视觉中心位置
+  const bottomSpaceCenter = drawY + drawnH + (canvasH - (drawY + drawnH)) / 2;
   
   switch (cfg.watermarkPos) {
     case 'bottomLeft':
       ctx.textAlign = 'left';
       x = bL + pad;
-      y = canvasH - bB / 2;
-      if (bB < fontSize * 2) y = canvasH - pad;
+      y = bottomSpaceCenter;
+      if ((canvasH - (drawY + drawnH)) < fontSize * 2) y = canvasH - pad;
       break;
     case 'center':
       ctx.textAlign = 'center';
       x = canvasW / 2;
-      y = canvasH - bB / 2;
-      if (bB < fontSize * 2) y = canvasH - pad;
+      y = bottomSpaceCenter;
+      if ((canvasH - (drawY + drawnH)) < fontSize * 2) y = canvasH - pad;
       break;
     default: // bottomRight
       ctx.textAlign = 'right';
       x = canvasW - bR - pad;
-      y = canvasH - bB / 2;
-      if (bB < fontSize * 2) y = canvasH - pad;
+      y = bottomSpaceCenter;
+      if ((canvasH - (drawY + drawnH)) < fontSize * 2) y = canvasH - pad;
   }
   
   ctx.fillText(text, x, y);
@@ -1062,7 +1087,9 @@ function syncAllConfigs() {
     item.config.cornerRadius = src.cornerRadius;
     item.config.shadowOn     = src.shadowOn;
     item.config.shadowIntensity = src.shadowIntensity;
-    item.config.filter       = src.filter;
+    item.config.photoStrokeOn = src.photoStrokeOn;
+    item.config.photoStrokeWidth = src.photoStrokeWidth;
+    item.config.photoStrokeColor = src.photoStrokeColor;
     item.config.watermarkOn  = src.watermarkOn;
     item.config.watermarkText = src.watermarkText;
     item.config.watermarkPos = src.watermarkPos;
