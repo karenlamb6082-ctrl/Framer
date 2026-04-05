@@ -1,20 +1,33 @@
 /**
- * Framer v3 Pro - 照片编辑器
- * 重构点：多图管理、高级边框(Museum/Float)、三分网格线、批量同步/导出
+ * Framer V4 - 高级照片边框编辑器
+ * 功能：多图管理、高级边框、滤镜、撤销/重做、导出格式选择
  */
 
 // ================================
-// 状态树 (V3)
+// 状态树
 // ================================
 const state = {
   items: [],        // { id, img, thumb, config: { ... } }
   activeIndex: -1,
   isDragging: false,
   drag: { x: 0, y: 0, ox: 0, oy: 0 },
-  history: [],      // 撤销栈: [{ activeIndex, config }]
+  history: [],      // 撤销栈
+  redoStack: [],    // 重做栈
+  exportFormat: 'png',
+  exportQuality: 0.92,
 };
 
-const MAX_HISTORY = 40; // 最多保存40步
+const MAX_HISTORY = 40;
+
+// 滤镜映射表
+const FILTERS = {
+  none:      'none',
+  grayscale: 'grayscale(100%)',
+  sepia:     'sepia(80%) saturate(120%)',
+  warm:      'sepia(25%) saturate(140%) hue-rotate(-10deg)',
+  cool:      'saturate(80%) hue-rotate(20deg) brightness(1.05)',
+  fade:      'saturate(50%) contrast(85%) brightness(1.1)',
+};
 
 // 预设边框初始颜色
 const BORDER_DEFAULTS = {
@@ -34,6 +47,7 @@ const createDefaultConfig = (frame = 'white') => ({
   photoOffsetY: 0,
   shadowOn:     false,
   shadowIntensity: 6,
+  filter:       'none',
 });
 
 // ================================
@@ -50,11 +64,13 @@ const els = {
   batchActions: document.getElementById('batchActions'),
   btnDownload:  document.getElementById('btnDownload'),
   btnUndo:      document.getElementById('btnUndo'),
+  btnRedo:      document.getElementById('btnRedo'),
   btnSyncAll:   document.getElementById('btnSyncAll'),
   btnDownloadAll: document.getElementById('btnDownloadAll'),
-  // Controls - 使用父容器做事件委托，避免静态 NodeList 导致新增按钮失效
+  // Controls
   ratioGrid:    document.getElementById('ratioGrid'),
   frameGrid:    document.getElementById('frameGrid'),
+  filterGrid:   document.getElementById('filterGrid'),
   frameWidth:   document.getElementById('frameWidth'),
   widthVal:     document.getElementById('widthVal'),
   colorSwatches: document.querySelectorAll('.color-swatch'),
@@ -66,6 +82,11 @@ const els = {
   shadowToggle: document.getElementById('shadowToggle'),
   shadowIntensity: document.getElementById('shadowIntensity'),
   shadowWrap:   document.getElementById('shadowSliderWrap'),
+  fmtPng:       document.getElementById('fmtPng'),
+  fmtJpeg:      document.getElementById('fmtJpeg'),
+  jpegQualityRow: document.getElementById('jpegQualityRow'),
+  jpegQuality:  document.getElementById('jpegQuality'),
+  jpegQualityVal: document.getElementById('jpegQualityVal'),
 };
 
 // ================================
@@ -107,11 +128,24 @@ function init() {
   }, { passive: false });
   window.addEventListener('touchend', stopDrag);
 
-  // Ctrl+Z 撤销快捷键
+  // 键盘快捷键
   document.addEventListener('keydown', (e) => {
+    // 如果焦点在输入框内，不拦截
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'Z') {
+      e.preventDefault(); redo(); return;
+    }
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-      e.preventDefault();
-      undo();
+      e.preventDefault(); undo(); return;
+    }
+    if (!state.items.length) return;
+    switch(e.key) {
+      case 'ArrowLeft':  e.preventDefault(); switchPhoto(-1); break;
+      case 'ArrowRight': e.preventDefault(); switchPhoto(1); break;
+      case '+': case '=': e.preventDefault(); adjustScale(5); break;
+      case '-': case '_': e.preventDefault(); adjustScale(-5); break;
+      case 'Delete':     e.preventDefault(); deleteItem(state.activeIndex); break;
     }
   });
 
@@ -180,8 +214,33 @@ function bindControlEvents() {
     syncUI(); scheduleRender();
   };
 
+  // 滤镜 — 事件委托
+  els.filterGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.filter-item');
+    if (!btn) return;
+    updateActiveConfig({ filter: btn.dataset.filter });
+    syncUI(); scheduleRender();
+  });
+
+  // 导出格式
+  els.fmtPng.onclick = () => {
+    state.exportFormat = 'png';
+    els.fmtPng.classList.add('active'); els.fmtJpeg.classList.remove('active');
+    els.jpegQualityRow.hidden = true;
+  };
+  els.fmtJpeg.onclick = () => {
+    state.exportFormat = 'jpeg';
+    els.fmtJpeg.classList.add('active'); els.fmtPng.classList.remove('active');
+    els.jpegQualityRow.hidden = false;
+  };
+  els.jpegQuality.oninput = (e) => {
+    state.exportQuality = parseInt(e.target.value) / 100;
+    els.jpegQualityVal.textContent = e.target.value + '%';
+  };
+
   // 批量操作
   els.btnUndo.onclick = undo;
+  els.btnRedo.onclick = redo;
   els.btnSyncAll.onclick = syncAllConfigs;
   els.btnDownloadAll.onclick = batchDownload;
   els.btnDownload.onclick = () => downloadOne(getActiveItem());
@@ -270,40 +329,69 @@ const getActiveItem = () => state.items[state.activeIndex];
 function updateActiveConfig(patch) {
   const item = getActiveItem();
   if (!item) return;
-  // 推入撤销历史（保存变更前的快照）
   pushHistory();
+  state.redoStack = []; // 新操作清空重做栈
+  els.btnRedo.disabled = true;
   item.config = { ...item.config, ...patch };
 }
 
-/**
- * 推入历史快照
- */
 function pushHistory() {
   const item = getActiveItem();
   if (!item) return;
-  state.history.push({
-    activeIndex: state.activeIndex,
-    config: { ...item.config }
-  });
+  state.history.push({ activeIndex: state.activeIndex, config: { ...item.config } });
   if (state.history.length > MAX_HISTORY) state.history.shift();
   els.btnUndo.disabled = false;
 }
 
-/**
- * 撤销：恢复上一步配置
- */
 function undo() {
   if (!state.history.length) return;
+  const current = getActiveItem();
+  if (current) {
+    state.redoStack.push({ activeIndex: state.activeIndex, config: { ...current.config } });
+    els.btnRedo.disabled = false;
+  }
   const snapshot = state.history.pop();
   const item = state.items[snapshot.activeIndex];
   if (item) {
     item.config = snapshot.config;
     state.activeIndex = snapshot.activeIndex;
-    renderThumbnails();
-    syncUI();
-    scheduleRender();
+    renderThumbnails(); syncUI(); scheduleRender();
   }
   els.btnUndo.disabled = state.history.length === 0;
+}
+
+function redo() {
+  if (!state.redoStack.length) return;
+  const current = getActiveItem();
+  if (current) {
+    state.history.push({ activeIndex: state.activeIndex, config: { ...current.config } });
+    els.btnUndo.disabled = false;
+  }
+  const snapshot = state.redoStack.pop();
+  const item = state.items[snapshot.activeIndex];
+  if (item) {
+    item.config = snapshot.config;
+    state.activeIndex = snapshot.activeIndex;
+    renderThumbnails(); syncUI(); scheduleRender();
+  }
+  els.btnRedo.disabled = state.redoStack.length === 0;
+}
+
+/** 快捷键辅助：切换照片 */
+function switchPhoto(dir) {
+  const next = state.activeIndex + dir;
+  if (next < 0 || next >= state.items.length) return;
+  state.activeIndex = next;
+  renderThumbnails(); syncUI(); scheduleRender();
+}
+
+/** 快捷键辅助：调整缩放 */
+function adjustScale(delta) {
+  const item = getActiveItem();
+  if (!item) return;
+  const newScale = Math.max(0.2, Math.min(2.5, item.config.photoScale + delta / 100));
+  updateActiveConfig({ photoScale: newScale });
+  syncUI(); scheduleRender();
 }
 
 function syncUI() {
@@ -334,6 +422,10 @@ function syncUI() {
   els.shadowToggle.textContent = cfg.shadowOn ? '开 启' : '关 闭';
   els.shadowToggle.classList.toggle('on', cfg.shadowOn);
   els.shadowWrap.classList.toggle('shadow-slider-disabled', !cfg.shadowOn);
+  // 滤镜
+  els.filterGrid.querySelectorAll('.filter-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.filter === cfg.filter)
+  );
 }
 
 function renderThumbnails() {
@@ -477,11 +569,15 @@ function render() {
     ctx.restore();
   }
 
-  // 4. 绘制照片 (裁剪圆角)
+  // 4. 绘制照片 (裁剪圆角 + 滤镜)
   ctx.save();
   roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
   ctx.clip();
+  // 应用滤镜
+  const filterStr = FILTERS[cfg.filter] || 'none';
+  if (filterStr !== 'none') ctx.filter = filterStr;
   ctx.drawImage(item.img, drawX, drawY, drawnW, drawnH);
+  ctx.filter = 'none'; // 重置，避免影响后续装饰层
   ctx.restore();
 
   // 5. 装饰层：Museum 艺术装裱增强（增加卡纸凹陷感）
@@ -662,6 +758,7 @@ function syncAllConfigs() {
     item.config.cornerRadius = src.cornerRadius;
     item.config.shadowOn     = src.shadowOn;
     item.config.shadowIntensity = src.shadowIntensity;
+    item.config.filter       = src.filter;
   });
   // 非阻断式提示（2秒后自动消失）
   showToast('已同步到所有图片（保留各自缩放和偏移）');
@@ -697,9 +794,15 @@ function downloadOne(item, filename = 'framer_photo.png') {
   state.activeIndex = state.items.indexOf(item);
   render();
   
+  // 根据导出设置生成文件
+  const mime = state.exportFormat === 'jpeg' ? 'image/jpeg' : 'image/png';
+  const quality = state.exportFormat === 'jpeg' ? state.exportQuality : 1.0;
+  const ext = state.exportFormat === 'jpeg' ? '.jpg' : '.png';
+  const finalName = filename.replace(/\.[^.]+$/, ext);
+  
   const link = document.createElement('a');
-  link.download = filename;
-  link.href = offscreen.toDataURL('image/png', 1.0);
+  link.download = finalName;
+  link.href = offscreen.toDataURL(mime, quality);
   link.click();
   
   // 还原

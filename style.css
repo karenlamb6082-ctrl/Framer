@@ -292,6 +292,42 @@ body {
 .btn-download:disabled { opacity: 0.4; cursor: not-allowed; }
 .download-hint { margin-top: 10px; font-size: 12px; color: var(--text-muted); text-align: center; }
 
+/* 滤镜网格 */
+.filter-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.filter-item {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  background: transparent; border: 2px solid transparent;
+  border-radius: var(--radius-sm); padding: 6px 2px;
+  cursor: pointer; transition: all var(--transition);
+}
+.filter-item:hover { background: var(--surface-2); }
+.filter-item.active { border-color: var(--accent); background: var(--accent-dim); }
+.filter-item span { font-size: 10px; color: var(--text-secondary); }
+.filter-item.active span { color: var(--accent); }
+
+.filter-preview {
+  width: 36px; height: 28px; border-radius: 4px;
+  background: linear-gradient(135deg, #c8a96e 30%, #7eb5c4 70%);
+}
+.filter-pre--bw { filter: grayscale(100%); }
+.filter-pre--sepia { filter: sepia(80%) saturate(120%); }
+.filter-pre--warm { filter: sepia(25%) saturate(140%) hue-rotate(-10deg); }
+.filter-pre--cool { filter: saturate(80%) hue-rotate(20deg) brightness(1.05); }
+.filter-pre--fade { filter: saturate(50%) contrast(85%) brightness(1.1); }
+
+/* 导出格式 */
+.export-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.export-fmt {
+  flex: 1; padding: 7px; text-align: center;
+  background: var(--surface-2); color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all var(--transition);
+}
+.export-fmt:hover { border-color: var(--accent); color: var(--text-primary); }
+.export-fmt.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+.jpeg-quality-row { margin-top: 6px; }
+
 .footer { text-align: center; padding: 30px 24px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
 
 /* 缩略图删除按钮 */

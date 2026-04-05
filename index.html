@@ -19,6 +19,7 @@
       <div class="flex-1"></div>
       <div class="batch-actions" id="batchActions" hidden>
         <button class="btn-undo" id="btnUndo" disabled title="撤销 (Ctrl+Z)">↩ 撤销</button>
+        <button class="btn-undo" id="btnRedo" disabled title="重做 (Ctrl+Shift+Z)">↪ 重做</button>
         <button class="btn-secondary" id="btnSyncAll">同步到全部</button>
         <button class="btn-secondary" id="btnDownloadAll">下载全部</button>
       </div>
@@ -145,7 +146,32 @@
             <span class="slider-val" id="scaleVal">100%</span>
             <span class="slider-label">放大</span>
           </div>
-          <div class="drag-hint">✨ 拖动照片微调中心构图 · 拖动时自动显示网格辅助</div>
+          <div class="drag-hint">✨ 拖动照片微调构图 · 快捷键: ←→切换 · +−缩放 · Del删除</div>
+        </section>
+
+        <!-- 4. 滤镜效果 -->
+        <section class="panel-section">
+          <h3 class="panel-title">滤镜效果</h3>
+          <div class="filter-grid" id="filterGrid">
+            <button class="filter-item active" data-filter="none">
+              <div class="filter-preview"></div><span>原图</span>
+            </button>
+            <button class="filter-item" data-filter="grayscale">
+              <div class="filter-preview filter-pre--bw"></div><span>黑白</span>
+            </button>
+            <button class="filter-item" data-filter="sepia">
+              <div class="filter-preview filter-pre--sepia"></div><span>复古</span>
+            </button>
+            <button class="filter-item" data-filter="warm">
+              <div class="filter-preview filter-pre--warm"></div><span>暖色</span>
+            </button>
+            <button class="filter-item" data-filter="cool">
+              <div class="filter-preview filter-pre--cool"></div><span>冷色</span>
+            </button>
+            <button class="filter-item" data-filter="fade">
+              <div class="filter-preview filter-pre--fade"></div><span>褪色</span>
+            </button>
+          </div>
         </section>
 
         <!-- 4. 边缘阴影 -->
@@ -162,11 +188,24 @@
           <div class="sub-label" style="margin-top: 10px;">边缘晕影强度</div>
         </section>
 
-        <!-- 下载 -->
+        <!-- 导出选项 -->
+        <section class="panel-section">
+          <h3 class="panel-title">导出设置</h3>
+          <div class="export-row">
+            <button class="export-fmt active" data-fmt="png" id="fmtPng">PNG</button>
+            <button class="export-fmt" data-fmt="jpeg" id="fmtJpeg">JPEG</button>
+          </div>
+          <div class="slider-row jpeg-quality-row" id="jpegQualityRow" hidden>
+            <span class="slider-label">质量</span>
+            <input type="range" class="slider" id="jpegQuality" min="60" max="100" value="92" title="JPEG 质量">
+            <span class="slider-val" id="jpegQualityVal">92%</span>
+          </div>
+        </section>
+
         <button class="btn-download" id="btnDownload" disabled>
           <span class="btn-icon">📥</span> 下载当前张
         </button>
-        <p class="download-hint">导出 PNG · 保留原图分辨率</p>
+        <p class="download-hint">保留原图分辨率</p>
       </div>
     </div>
   </main>
