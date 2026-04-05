@@ -106,6 +106,7 @@ const els = {
   uploadZone:   document.getElementById('uploadZone'),
   fileInput:    document.getElementById('fileInput'),
   btnUpload:    document.getElementById('btnUpload'),
+  btnReupload:  document.getElementById('btnReupload'),
   canvasWrap:   document.getElementById('canvasWrap'),
   canvas:       document.getElementById('previewCanvas'),
   ctx:          document.getElementById('previewCanvas').getContext('2d'),
@@ -1155,9 +1156,9 @@ function toggleCollageMode() {
     els.canvasWrap.hidden = false;
     els.btnReupload.hidden = true;
     els.btnCollageAdd.hidden = false;
+    els.controlPanel.hidden = true;
     document.querySelector('.thumbnail-outer').style.display = 'none';
     if (state.collageLayers.length === 0) {
-      // 空画布
       renderCollage();
     } else {
       scheduleRender();
@@ -1166,6 +1167,7 @@ function toggleCollageMode() {
     // 退出拼图模式：恢复普通状态
     els.btnCollageAdd.hidden = true;
     els.btnReupload.hidden = false;
+    els.controlPanel.hidden = false;
     document.querySelector('.thumbnail-outer').style.display = '';
     if (state.items.length) {
       els.canvasWrap.hidden = false;
