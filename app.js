@@ -172,6 +172,17 @@ function bindControlEvents() {
   els.btnSyncAll.onclick = syncAllConfigs;
   els.btnDownloadAll.onclick = batchDownload;
   els.btnDownload.onclick = () => downloadOne(getActiveItem());
+
+  // 自定义比例
+  document.getElementById('btnApplyCustomRatio').onclick = () => {
+    const w = parseInt(document.getElementById('customRatioW').value) || 1;
+    const h = parseInt(document.getElementById('customRatioH').value) || 1;
+    const ratio = `${Math.max(1,w)}:${Math.max(1,h)}`;
+    updateActiveConfig({ aspectRatio: ratio, photoOffsetX: 0, photoOffsetY: 0 });
+    // 取消预设按钮高亮
+    els.ratioGrid.querySelectorAll('.ratio-item').forEach(el => el.classList.remove('active'));
+    scheduleRender();
+  };
 }
 
 // ================================
@@ -542,7 +553,7 @@ function drawGrid(ctx, x, y, w, h) {
 
 function fitDisplay() {
   const clientW = els.canvasWrap.clientWidth - 48;
-  const clientH = 650;
+  const clientH = 520;  // 与预览区高度匹配，作为唯一尺寸约束
   const ratio = Math.min(clientW / els.canvas.width, clientH / els.canvas.height, 1);
   els.canvas.style.width  = Math.round(els.canvas.width * ratio) + 'px';
   els.canvas.style.height = Math.round(els.canvas.height * ratio) + 'px';
