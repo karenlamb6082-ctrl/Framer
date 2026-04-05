@@ -853,7 +853,10 @@ function render() {
   // 4.5极简质感隔离缝隙线 (Inner Stroke)
   if (cfg.photoStrokeOn && cfg.photoStrokeWidth > 0) {
     ctx.save();
-    const lw = cfg.photoStrokeWidth;
+    // 动态换算防缩水线宽：当图片导出分辨率长边达 3000px 时，按千分比等比例放大线宽，保证绝不消失。
+    const dynamicBase = Math.max(canvasW, canvasH);
+    const lw = Math.max(1, Math.round(dynamicBase * cfg.photoStrokeWidth / 1000));
+    
     ctx.strokeStyle = cfg.photoStrokeColor;
     ctx.lineWidth = lw;
     roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
