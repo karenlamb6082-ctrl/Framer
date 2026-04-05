@@ -356,13 +356,58 @@ body {
 
 @media (max-width: 1000px) {
   .workspace { grid-template-columns: 1fr; }
-  /* 移动端：预览区在上，控制区在下 */
-  .preview-panel { 
-    min-height: 360px; 
-    top: 100px; /* 移动端 header 可能会折行变厚 */
+
+  /* Header 精简 */
+  .header-inner {
+    flex-wrap: wrap; gap: 8px;
+    padding: 10px 16px;
   }
-  .header-inner { flex-wrap: wrap; gap: 10px; }
-  .batch-actions { width: 100%; justify-content: flex-end; }
+  .header-sub { display: none; }
+  .header-divider { display: none; }
+  .batch-actions {
+    width: 100%; justify-content: space-between;
+    gap: 6px; order: 10;
+  }
+  .batch-actions .btn-undo,
+  .batch-actions .btn-secondary {
+    font-size: 11px; padding: 5px 10px;
+  }
+  .btn-collage {
+    font-size: 12px; padding: 6px 14px;
+    order: 5;
+  }
+
+  /* 预览面板 */
+  .preview-panel {
+    min-height: 300px;
+    position: relative; /* 移动端取消 sticky */
+    top: auto;
+    border-radius: var(--radius-lg);
+  }
+  .canvas-wrap { padding: 16px 12px 12px; }
+
+  /* 控制面板 */
+  .main { padding: 16px 12px; }
+  .panel-section { padding: 14px 14px; }
+
+  /* 比例网格 — 移动端紧凑 */
+  .ratio-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .ratio-item { padding: 6px 2px; font-size: 11px; }
+  .custom-ratio-row { padding: 6px 8px; }
+
+  /* 边框选择 — 移动端自动换行 */
+  .frame-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .frame-item { padding: 6px 2px; }
+  .frame-item span { font-size: 9px; }
+  .frame-thumb { width: 44px; height: 36px; }
+
+  /* 滑块行 */
+  .slider-row { gap: 6px; }
+  .slider-label { font-size: 10px; }
+  .slider-val { font-size: 11px; min-width: 32px; }
+
+  /* 下载按钮 */
+  .btn-download { padding: 12px; font-size: 14px; }
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
