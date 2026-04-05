@@ -126,6 +126,13 @@
             <div class="color-swatch" style="background:#1a1a1a" data-color="#1a1a1a"></div>
             <input type="color" class="color-custom" id="customColor" value="#ffffff">
           </div>
+          <div class="gradient-row" id="gradientRow">
+            <button class="toggle-btn" id="gradientToggle">渐变</button>
+            <div class="gradient-color2" id="gradientColor2Wrap" hidden>
+              <span class="slider-label">第二色</span>
+              <input type="color" class="color-custom" id="gradientColor2" value="#f5f0e8">
+            </div>
+          </div>
         </section>
 
         <!-- 3. 照片调整 -->
@@ -186,6 +193,33 @@
             </div>
           </div>
           <div class="sub-label" style="margin-top: 10px;">边缘晕影强度</div>
+        </section>
+
+        <!-- 5. 水印/文字 -->
+        <section class="panel-section">
+          <h3 class="panel-title">水印文字</h3>
+          <div class="watermark-row">
+            <button class="toggle-btn" id="watermarkToggle">关 闭</button>
+            <input type="text" class="watermark-input" id="watermarkText" placeholder="输入水印文字..." disabled>
+          </div>
+          <div class="watermark-options" id="watermarkOptions" hidden>
+            <div class="sub-label">位置</div>
+            <div class="watermark-pos-grid">
+              <button class="export-fmt active" data-pos="bottomRight" id="posBottomRight">右下</button>
+              <button class="export-fmt" data-pos="bottomLeft" id="posBottomLeft">左下</button>
+              <button class="export-fmt" data-pos="center" id="posCenter">居中</button>
+            </div>
+            <div class="slider-row" style="margin-top:8px">
+              <span class="slider-label">小</span>
+              <input type="range" class="slider" id="watermarkSize" min="10" max="60" value="24" title="字体大小">
+              <span class="slider-val" id="watermarkSizeVal">24px</span>
+              <span class="slider-label">大</span>
+            </div>
+            <div class="export-row" style="margin-top:8px">
+              <button class="export-fmt active" data-wcolor="white" id="wcolorWhite">白色</button>
+              <button class="export-fmt" data-wcolor="black" id="wcolorBlack">黑色</button>
+            </div>
+          </div>
         </section>
 
         <!-- 导出选项 -->

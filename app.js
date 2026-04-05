@@ -40,6 +40,8 @@ const createDefaultConfig = (frame = 'white') => ({
   frameType:    frame,
   frameWidth:   6,
   frameColor:   BORDER_DEFAULTS[frame],
+  gradientOn:   false,
+  gradientColor2: '#f5f0e8',
   aspectRatio:  'original',
   cornerRadius: 0,
   photoScale:   1.0,
@@ -48,6 +50,11 @@ const createDefaultConfig = (frame = 'white') => ({
   shadowOn:     false,
   shadowIntensity: 6,
   filter:       'none',
+  watermarkOn:  false,
+  watermarkText: '',
+  watermarkPos: 'bottomRight',
+  watermarkSize: 24,
+  watermarkColor: 'white',
 });
 
 // ================================
@@ -87,6 +94,14 @@ const els = {
   jpegQualityRow: document.getElementById('jpegQualityRow'),
   jpegQuality:  document.getElementById('jpegQuality'),
   jpegQualityVal: document.getElementById('jpegQualityVal'),
+  gradientToggle: document.getElementById('gradientToggle'),
+  gradientColor2Wrap: document.getElementById('gradientColor2Wrap'),
+  gradientColor2: document.getElementById('gradientColor2'),
+  watermarkToggle: document.getElementById('watermarkToggle'),
+  watermarkText:  document.getElementById('watermarkText'),
+  watermarkOptions: document.getElementById('watermarkOptions'),
+  watermarkSize:  document.getElementById('watermarkSize'),
+  watermarkSizeVal: document.getElementById('watermarkSizeVal'),
 };
 
 // ================================
@@ -237,6 +252,55 @@ function bindControlEvents() {
     state.exportQuality = parseInt(e.target.value) / 100;
     els.jpegQualityVal.textContent = e.target.value + '%';
   };
+
+  // 渐变开关
+  els.gradientToggle.onclick = () => {
+    const item = getActiveItem();
+    if (!item) return;
+    const next = !item.config.gradientOn;
+    updateActiveConfig({ gradientOn: next });
+    syncUI(); scheduleRender();
+  };
+  els.gradientColor2.oninput = (e) => {
+    updateActiveConfig({ gradientColor2: e.target.value });
+    scheduleRender();
+  };
+
+  // 水印
+  els.watermarkToggle.onclick = () => {
+    const item = getActiveItem();
+    if (!item) return;
+    const next = !item.config.watermarkOn;
+    updateActiveConfig({ watermarkOn: next });
+    syncUI(); scheduleRender();
+  };
+  els.watermarkText.oninput = (e) => {
+    updateActiveConfig({ watermarkText: e.target.value });
+    scheduleRender();
+  };
+  els.watermarkSize.oninput = (e) => {
+    updateActiveConfig({ watermarkSize: parseInt(e.target.value) });
+    els.watermarkSizeVal.textContent = e.target.value + 'px';
+    scheduleRender();
+  };
+  // 水印位置按钮
+  document.querySelectorAll('[data-pos]').forEach(btn => {
+    btn.onclick = () => {
+      updateActiveConfig({ watermarkPos: btn.dataset.pos });
+      document.querySelectorAll('[data-pos]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      scheduleRender();
+    };
+  });
+  // 水印颜色
+  document.querySelectorAll('[data-wcolor]').forEach(btn => {
+    btn.onclick = () => {
+      updateActiveConfig({ watermarkColor: btn.dataset.wcolor });
+      document.querySelectorAll('[data-wcolor]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      scheduleRender();
+    };
+  });
 
   // 批量操作
   els.btnUndo.onclick = undo;
@@ -426,6 +490,21 @@ function syncUI() {
   els.filterGrid.querySelectorAll('.filter-item').forEach(el =>
     el.classList.toggle('active', el.dataset.filter === cfg.filter)
   );
+  // 渐变
+  els.gradientToggle.classList.toggle('on', cfg.gradientOn);
+  els.gradientToggle.textContent = cfg.gradientOn ? '渐变 开' : '渐变';
+  els.gradientColor2Wrap.hidden = !cfg.gradientOn;
+  els.gradientColor2.value = cfg.gradientColor2;
+  // 水印
+  els.watermarkToggle.textContent = cfg.watermarkOn ? '开 启' : '关 闭';
+  els.watermarkToggle.classList.toggle('on', cfg.watermarkOn);
+  els.watermarkText.disabled = !cfg.watermarkOn;
+  els.watermarkText.value = cfg.watermarkText;
+  els.watermarkOptions.hidden = !cfg.watermarkOn;
+  els.watermarkSize.value = cfg.watermarkSize;
+  els.watermarkSizeVal.textContent = cfg.watermarkSize + 'px';
+  document.querySelectorAll('[data-pos]').forEach(b => b.classList.toggle('active', b.dataset.pos === cfg.watermarkPos));
+  document.querySelectorAll('[data-wcolor]').forEach(b => b.classList.toggle('active', b.dataset.wcolor === cfg.watermarkColor));
 }
 
 function renderThumbnails() {
@@ -532,14 +611,23 @@ function render() {
   ctx.clearRect(0, 0, canvasW, canvasH);
 
   // 1. 绘制背景层
+  const getBorderFill = () => {
+    if (cfg.gradientOn && cfg.frameType !== 'film' && cfg.frameType !== 'none') {
+      const grad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
+      grad.addColorStop(0, cfg.frameColor);
+      grad.addColorStop(1, cfg.gradientColor2);
+      return grad;
+    }
+    return cfg.frameColor;
+  };
+  
   if (cfg.frameType === 'film') {
     ctx.fillStyle = '#111'; ctx.fillRect(0, 0, canvasW, canvasH);
   } else if (cfg.frameType === 'museum') {
-    // 博物馆风：实色外框 + 极其轻微的内切阴影效果
-    ctx.fillStyle = cfg.frameColor;
+    ctx.fillStyle = getBorderFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
   } else if (cfg.frameType !== 'none') {
-    ctx.fillStyle = cfg.frameColor;
+    ctx.fillStyle = getBorderFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
   }
 
@@ -611,9 +699,14 @@ function render() {
     drawVignette(ctx, drawX, drawY, drawnW, drawnH, pR, cfg.shadowIntensity);
   }
 
-  // 8. 网格辅助线 (修正：完全静止在相框槽位)
+  // 8. 网格辅助线
   if (state.isDragging) {
     drawGrid(ctx, photoX, photoY, photoW, photoH);
+  }
+
+  // 9. 水印文字
+  if (cfg.watermarkOn && cfg.watermarkText) {
+    drawWatermark(ctx, cfg, canvasW, canvasH, bT, bB, bL, bR);
   }
 
   fitDisplay();
@@ -732,6 +825,44 @@ function drawGrid(ctx, x, y, w, h) {
   ctx.restore();
 }
 
+function drawWatermark(ctx, cfg, canvasW, canvasH, bT, bB, bL, bR) {
+  const fontSize = Math.round(canvasW * cfg.watermarkSize / 1000);
+  ctx.save();
+  ctx.font = `${fontSize}px 'Inter', sans-serif`;
+  ctx.fillStyle = cfg.watermarkColor === 'white' 
+    ? 'rgba(255,255,255,0.6)' 
+    : 'rgba(0,0,0,0.5)';
+  ctx.textBaseline = 'middle';
+  
+  const text = cfg.watermarkText;
+  const metrics = ctx.measureText(text);
+  const pad = fontSize * 0.8;
+  let x, y;
+  
+  switch (cfg.watermarkPos) {
+    case 'bottomLeft':
+      ctx.textAlign = 'left';
+      x = bL + pad;
+      y = canvasH - bB / 2;
+      if (bB < fontSize * 2) y = canvasH - pad;
+      break;
+    case 'center':
+      ctx.textAlign = 'center';
+      x = canvasW / 2;
+      y = canvasH - bB / 2;
+      if (bB < fontSize * 2) y = canvasH - pad;
+      break;
+    default: // bottomRight
+      ctx.textAlign = 'right';
+      x = canvasW - bR - pad;
+      y = canvasH - bB / 2;
+      if (bB < fontSize * 2) y = canvasH - pad;
+  }
+  
+  ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
 function fitDisplay() {
   const clientW = els.canvasWrap.clientWidth - 48;
   const clientH = 520;  // 与预览区高度匹配，作为唯一尺寸约束
@@ -754,11 +885,18 @@ function syncAllConfigs() {
     item.config.frameType    = src.frameType;
     item.config.frameWidth   = src.frameWidth;
     item.config.frameColor   = src.frameColor;
+    item.config.gradientOn   = src.gradientOn;
+    item.config.gradientColor2 = src.gradientColor2;
     item.config.aspectRatio  = src.aspectRatio;
     item.config.cornerRadius = src.cornerRadius;
     item.config.shadowOn     = src.shadowOn;
     item.config.shadowIntensity = src.shadowIntensity;
     item.config.filter       = src.filter;
+    item.config.watermarkOn  = src.watermarkOn;
+    item.config.watermarkText = src.watermarkText;
+    item.config.watermarkPos = src.watermarkPos;
+    item.config.watermarkSize = src.watermarkSize;
+    item.config.watermarkColor = src.watermarkColor;
   });
   // 非阻断式提示（2秒后自动消失）
   showToast('已同步到所有图片（保留各自缩放和偏移）');
@@ -833,5 +971,32 @@ function showToast(msg) {
 }
 
 // 启动
-window.onload = init;
+window.onload = () => {
+  // 读取本地偷好缓存
+  try {
+    const saved = JSON.parse(localStorage.getItem('framer_prefs'));
+    if (saved) {
+      if (saved.exportFormat) state.exportFormat = saved.exportFormat;
+      if (saved.exportQuality) state.exportQuality = saved.exportQuality;
+    }
+  } catch(e) { /* ignore */ }
+  init();
+};
 window.onresize = () => { if(state.items.length) fitDisplay(); };
+
+// 页面关闭前保存偏好
+window.addEventListener('beforeunload', () => {
+  try {
+    const item = getActiveItem();
+    const prefs = {
+      exportFormat: state.exportFormat,
+      exportQuality: state.exportQuality,
+    };
+    if (item) {
+      prefs.frameType = item.config.frameType;
+      prefs.frameColor = item.config.frameColor;
+      prefs.filter = item.config.filter;
+    }
+    localStorage.setItem('framer_prefs', JSON.stringify(prefs));
+  } catch(e) { /* ignore */ }
+});

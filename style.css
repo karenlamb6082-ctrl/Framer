@@ -328,6 +328,24 @@ body {
 .export-fmt.active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
 .jpeg-quality-row { margin-top: 6px; }
 
+/* 渐变边框 */
+.gradient-row {
+  display: flex; align-items: center; gap: 10px; margin-top: 12px;
+}
+.gradient-color2 { display: flex; align-items: center; gap: 6px; }
+
+/* 水印 */
+.watermark-row { display: flex; align-items: center; gap: 10px; }
+.watermark-input {
+  flex: 1; padding: 6px 10px;
+  background: var(--surface-3); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 6px;
+  font-size: 12px; font-family: var(--font);
+}
+.watermark-input:disabled { opacity: 0.4; }
+.watermark-input:focus { border-color: var(--accent); outline: none; }
+.watermark-pos-grid { display: flex; gap: 6px; }
+
 .footer { text-align: center; padding: 30px 24px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
 
 /* 缩略图删除按钮 */
