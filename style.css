@@ -86,7 +86,9 @@ body {
   overflow: hidden;
   min-height: 540px;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  position: relative;
+  position: sticky;
+  top: 80px; /* 留出 header 高度的距离 */
+  z-index: 40;
 }
 
 .upload-zone {
@@ -352,7 +354,10 @@ body {
 @media (max-width: 1000px) {
   .workspace { grid-template-columns: 1fr; }
   /* 移动端：预览区在上，控制区在下 */
-  .preview-panel { min-height: 360px; }
+  .preview-panel { 
+    min-height: 360px; 
+    top: 100px; /* 移动端 header 可能会折行变厚 */
+  }
   .header-inner { flex-wrap: wrap; gap: 10px; }
   .batch-actions { width: 100%; justify-content: flex-end; }
 }
