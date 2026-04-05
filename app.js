@@ -15,13 +15,13 @@ const state = {
   redoStack: [],
   exportFormat: 'png',
   exportQuality: 0.92,
-  // 拼图模式
+  // 拼图模式（独立功能，不依赖 state.items）
   collageMode: false,
   collageLayout: 'side-by-side',
-  collageBg: '#ffffff',     // 画布背景色
-  collageLayers: [],        // [{ itemIdx, x, y, w, h, cornerRadius, borderWidth, borderColor, zIndex }]
-  selectedLayerIdx: -1,     // 当前选中的图层
-  layerDragMode: null,      // 'move' | 'resize-nw/ne/sw/se' | null
+  collageBg: '#ffffff',
+  collageLayers: [],        // [{ img, previewImg, x, y, w, h, cornerRadius, borderWidth, borderColor, zIndex }]
+  selectedLayerIdx: -1,
+  layerDragMode: null,      // 'move' | 'resize-nw/ne/sw/se'
 };
 
 const MAX_HISTORY = 40;
@@ -158,6 +158,8 @@ const els = {
   layerUp:        document.getElementById('layerUp'),
   layerDown:      document.getElementById('layerDown'),
   collageBgPicker: document.getElementById('collageBgPicker'),
+  btnCollageAdd:   document.getElementById('btnCollageAdd'),
+  collageFileInput: document.getElementById('collageFileInput'),
 };
 
 // ================================
@@ -429,6 +431,12 @@ function bindControlEvents() {
   els.collageBgPicker.oninput = (e) => {
     state.collageBg = e.target.value;
     scheduleRender();
+  };
+  // 拼图模式：添加照片
+  els.btnCollageAdd.onclick = () => els.collageFileInput.click();
+  els.collageFileInput.onchange = (e) => {
+    addPhotosToCollage(e.target.files);
+    e.target.value = '';
   };
 
   // 自定义比例
@@ -1128,41 +1136,116 @@ function showToast(msg) {
 }
 
 // ================================
-// 拼图模式（自由图层）
+// 拼图模式（独立功能）
 // ================================
 
 const COLLAGE_W = 2400;
 const COLLAGE_H = 1800;
 const HANDLE_SZ = 20;
+const PREVIEW_MAX_C = 1600; // 拼图预览降采样上限
 
 function toggleCollageMode() {
-  if (state.items.length < 2) {
-    showToast('至少需要 2 张照片才能使用拼图');
-    return;
-  }
   state.collageMode = !state.collageMode;
   els.btnCollage.classList.toggle('active', state.collageMode);
   els.collagePanel.hidden = !state.collageMode;
-  if (state.collageMode) initCollageLayers();
+
+  if (state.collageMode) {
+    // 进入拼图模式：显示画布，隐藏普通编辑区
+    els.uploadZone.style.display = 'none';
+    els.canvasWrap.hidden = false;
+    els.btnReupload.hidden = true;
+    els.btnCollageAdd.hidden = false;
+    document.querySelector('.thumbnail-outer').style.display = 'none';
+    if (state.collageLayers.length === 0) {
+      // 空画布
+      renderCollage();
+    } else {
+      scheduleRender();
+    }
+  } else {
+    // 退出拼图模式：恢复普通状态
+    els.btnCollageAdd.hidden = true;
+    els.btnReupload.hidden = false;
+    document.querySelector('.thumbnail-outer').style.display = '';
+    if (state.items.length) {
+      els.canvasWrap.hidden = false;
+      els.uploadZone.style.display = 'none';
+    } else {
+      els.canvasWrap.hidden = true;
+      els.uploadZone.style.display = '';
+    }
+    state.collageLayers = [];
+    state.selectedLayerIdx = -1;
+    scheduleRender();
+  }
+}
+
+/** 拼图模式专用：上传照片并添加为图层 */
+async function addPhotosToCollage(files) {
+  if (!files || !files.length) return;
+  for (const file of files) {
+    if (!file.type.startsWith('image/')) continue;
+    const imgData = await loadCollageImage(file);
+    // 计算默认大小和位置（居中，适应画布）
+    const maxW = COLLAGE_W * 0.6;
+    const maxH = COLLAGE_H * 0.6;
+    const ratio = Math.min(maxW / imgData.img.width, maxH / imgData.img.height, 1);
+    const w = Math.round(imgData.img.width * ratio);
+    const h = Math.round(imgData.img.height * ratio);
+    // 偏移避免完全重叠
+    const offset = state.collageLayers.length * 60;
+    state.collageLayers.push({
+      img: imgData.img,
+      previewImg: imgData.previewImg,
+      x: Math.round((COLLAGE_W - w) / 2) + offset,
+      y: Math.round((COLLAGE_H - h) / 2) + offset,
+      w, h,
+      cornerRadius: 0,
+      borderWidth: 0,
+      borderColor: '#ffffff',
+      zIndex: state.collageLayers.length
+    });
+  }
+  state.selectedLayerIdx = state.collageLayers.length - 1;
+  syncLayerUI();
   scheduleRender();
 }
 
+/** 加载单张图片（拼图专用） */
+function loadCollageImage(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let previewImg = img;
+        if (img.width > PREVIEW_MAX_C || img.height > PREVIEW_MAX_C) {
+          previewImg = createPreview(img);
+        }
+        resolve({ img, previewImg });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/** 布局模板：重新排列当前图层 */
 function initCollageLayers() {
   const layout = COLLAGE_LAYOUTS[state.collageLayout];
-  if (!layout) return;
+  if (!layout || !state.collageLayers.length) return;
   const gap = 30;
-  state.collageLayers = [];
-  for (let i = 0; i < layout.slots; i++) {
-    const r = layout.regions[i];
-    state.collageLayers.push({
-      itemIdx: i < state.items.length ? i : i % state.items.length,
-      x: Math.round(r.x * COLLAGE_W + gap),
-      y: Math.round(r.y * COLLAGE_H + gap),
-      w: Math.round(r.w * COLLAGE_W - gap * 2),
-      h: Math.round(r.h * COLLAGE_H - gap * 2),
-      cornerRadius: 0, borderWidth: 0, borderColor: '#ffffff', zIndex: i
-    });
-  }
+  const count = state.collageLayers.length;
+  // 对已有图层应用布局位置
+  state.collageLayers.forEach((layer, i) => {
+    const regionIdx = i % layout.regions.length;
+    const r = layout.regions[regionIdx];
+    layer.x = Math.round(r.x * COLLAGE_W + gap);
+    layer.y = Math.round(r.y * COLLAGE_H + gap);
+    layer.w = Math.round(r.w * COLLAGE_W - gap * 2);
+    layer.h = Math.round(r.h * COLLAGE_H - gap * 2);
+    layer.zIndex = i;
+  });
   state.selectedLayerIdx = 0;
   syncLayerUI();
 }
@@ -1192,24 +1275,34 @@ function moveLayer(dir) {
 }
 
 function renderCollage() {
-  if (!state.items.length) return;
   const ctx = els.ctx;
   els.canvas.width = COLLAGE_W;
   els.canvas.height = COLLAGE_H;
+
+  // 画布背景
   ctx.fillStyle = state.collageBg;
   ctx.fillRect(0, 0, COLLAGE_W, COLLAGE_H);
+
+  if (!state.collageLayers.length) {
+    // 空画布提示
+    ctx.fillStyle = 'rgba(255,255,255,0.15)';
+    ctx.font = 'bold 48px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('点击「+ 添加照片」开始拼图', COLLAGE_W / 2, COLLAGE_H / 2);
+    fitDisplay();
+    return;
+  }
 
   const sorted = [...state.collageLayers]
     .map((l, i) => ({ ...l, _i: i }))
     .sort((a, b) => a.zIndex - b.zIndex);
 
   sorted.forEach(layer => {
-    const item = state.items[layer.itemIdx];
-    if (!item) return;
     const { x, y, w, h, cornerRadius, borderWidth, borderColor } = layer;
     const bw = Math.round(Math.min(w, h) * borderWidth / 100);
     const oR = Math.min(w, h) / 2 * cornerRadius / 50;
 
+    // 边框
     if (bw > 0) {
       ctx.save();
       ctx.fillStyle = borderColor;
@@ -1218,6 +1311,7 @@ function renderCollage() {
       ctx.restore();
     }
 
+    // 照片
     const px = x + bw, py = y + bw, pw = w - bw * 2, ph = h - bw * 2;
     if (pw <= 0 || ph <= 0) return;
     const iR = Math.max(0, oR - bw);
@@ -1225,7 +1319,7 @@ function renderCollage() {
     roundRectPath(ctx, px, py, pw, ph, iR);
     ctx.clip();
 
-    const img = item.previewImg || item.img;
+    const img = layer.previewImg || layer.img;
     const ia = img.width / img.height, sa = pw / ph;
     let dw, dh;
     if (ia > sa) { dh = ph; dw = dh * ia; }
@@ -1233,6 +1327,7 @@ function renderCollage() {
     ctx.drawImage(img, px + (pw - dw) / 2, py + (ph - dh) / 2, dw, dh);
     ctx.restore();
 
+    // 选中高亮
     if (layer._i === state.selectedLayerIdx) {
       ctx.save();
       ctx.strokeStyle = '#7c6bff';
@@ -1261,6 +1356,7 @@ function startCollageDrag(e) {
   const cx = (e.clientX - rect.left) * sx;
   const cy = (e.clientY - rect.top) * sy;
 
+  // 检查缩放手柄
   const sel = state.collageLayers[state.selectedLayerIdx];
   if (sel) {
     const hs = HANDLE_SZ;
@@ -1281,6 +1377,7 @@ function startCollageDrag(e) {
     }
   }
 
+  // 点选图层
   const sorted = [...state.collageLayers].map((l, i) => ({ ...l, idx: i })).sort((a, b) => b.zIndex - a.zIndex);
   for (const layer of sorted) {
     if (cx >= layer.x && cx <= layer.x + layer.w && cy >= layer.y && cy <= layer.y + layer.h) {
@@ -1338,10 +1435,10 @@ function downloadCollage() {
   const origCtx = els.ctx, origCanvas = els.canvas;
   els.ctx = offCtx; els.canvas = offscreen;
 
+  // 导出用原图
   const savedPreviews = state.collageLayers.map(l => {
-    const item = state.items[l.itemIdx];
-    const s = item?.previewImg;
-    if (item) item.previewImg = item.img;
+    const s = l.previewImg;
+    l.previewImg = l.img;
     return s;
   });
   const savedSel = state.selectedLayerIdx;
@@ -1357,10 +1454,7 @@ function downloadCollage() {
   link.href = offscreen.toDataURL(mime, quality);
   link.click();
 
-  state.collageLayers.forEach((l, i) => {
-    const item = state.items[l.itemIdx];
-    if (item) item.previewImg = savedPreviews[i];
-  });
+  state.collageLayers.forEach((l, i) => { l.previewImg = savedPreviews[i]; });
   els.ctx = origCtx; els.canvas = origCanvas;
   scheduleRender();
 }

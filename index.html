@@ -39,11 +39,11 @@
         <button class="btn-undo" id="btnUndo" disabled title="撤销 (Ctrl+Z)">↩ 撤销</button>
         <button class="btn-undo" id="btnRedo" disabled title="重做 (Ctrl+Shift+Z)">↪ 重做</button>
         <span class="header-divider"></span>
-        <button class="btn-collage" id="btnCollage" title="拼图模式">🧩 拼图模式</button>
-        <span class="header-divider"></span>
         <button class="btn-secondary" id="btnSyncAll">同步到全部</button>
         <button class="btn-secondary" id="btnDownloadAll">下载全部</button>
       </div>
+      <span class="header-divider"></span>
+      <button class="btn-collage" id="btnCollage" title="拼图模式">🧩 拼图模式</button>
     </div>
   </header>
 
@@ -62,6 +62,10 @@
         <div id="canvasWrap" class="canvas-wrap" hidden>
           <canvas id="previewCanvas"></canvas>
           <button class="btn-reupload" id="btnReupload">继续添加</button>
+          
+          <!-- 拼图模式：添加照片按钮 -->
+          <button class="btn-collage-add" id="btnCollageAdd" hidden>+ 添加照片</button>
+          <input type="file" id="collageFileInput" accept="image/*" multiple hidden>
           
           <!-- 缩略图条 -->
           <div class="thumbnail-outer">
