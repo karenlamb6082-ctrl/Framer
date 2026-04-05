@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Framer | 高级照片边框编辑器</title>
+  <meta name="description" content="纯前端高级照片边框编辑器，支持批量处理、圆角、缩放、阴影及多种比例导出。">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <span class="logo-icon">🖼️</span>
+        <span class="logo-text">Framer</span>
+      </div>
+      <div class="header-sub">高级照片边框编辑器 · V3 Pro</div>
+      <div class="flex-1"></div>
+      <div class="batch-actions" id="batchActions" hidden>
+        <button class="btn-secondary" id="btnSyncAll">同步到全部</button>
+        <button class="btn-secondary" id="btnDownloadAll">下载全部</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="workspace">
+      <!-- 左侧预览区 -->
+      <div class="preview-panel">
+        <div id="uploadZone" class="upload-zone">
+          <div class="upload-icon">📸</div>
+          <div class="upload-title">拖拽图片到这里</div>
+          <p class="upload-hint">支持 JPG、PNG、WEBP · 可一次选择多张</p>
+          <button class="btn-upload" id="btnUpload">选择照片</button>
+          <input type="file" id="fileInput" accept="image/*" multiple hidden>
+        </div>
+
+        <div id="canvasWrap" class="canvas-wrap" hidden>
+          <canvas id="previewCanvas"></canvas>
+          <button class="btn-reupload" id="btnReupload">继续添加</button>
+          
+          <!-- 缩略图条 -->
+          <div class="thumbnail-outer">
+            <div id="thumbnailStrip" class="thumbnail-strip"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧控制区 -->
+      <div class="control-panel">
+        <!-- 1. 输出比例 -->
+        <section class="panel-section">
+          <h3 class="panel-title">输出比例</h3>
+          <div class="ratio-grid" id="ratioGrid">
+            <button class="ratio-item active" data-ratio="original">原始</button>
+            <button class="ratio-item" data-ratio="1:1">1:1</button>
+            <button class="ratio-item" data-ratio="4:3">4:3</button>
+            <button class="ratio-item" data-ratio="3:4">3:4</button>
+            <button class="ratio-item" data-ratio="16:9">16:9</button>
+            <button class="ratio-item" data-ratio="9:16">9:16</button>
+            <button class="ratio-item" data-ratio="5:4">5:4</button>
+            <button class="ratio-item" data-ratio="2:3">2:3</button>
+            <button class="ratio-item" data-ratio="21:9">21:9</button>
+          </div>
+        </section>
+
+        <!-- 2. 选择边框 -->
+        <section class="panel-section">
+          <h3 class="panel-title">选择边框</h3>
+          <div class="frame-grid" id="frameGrid">
+            <button class="frame-item active" data-frame="white">
+              <div class="frame-thumb frame-thumb--white"><div class="frame-thumb-inner"></div></div>
+              <span>系统白</span>
+            </button>
+            <button class="frame-item" data-frame="black">
+              <div class="frame-thumb frame-thumb--black"><div class="frame-thumb-inner"></div></div>
+              <span>纯粹黑</span>
+            </button>
+            <button class="frame-item" data-frame="museum">
+              <div class="frame-thumb frame-thumb--museum"><div class="frame-thumb-inner"></div></div>
+              <span>博物馆</span>
+            </button>
+            <button class="frame-item" data-frame="polaroid">
+              <div class="frame-thumb frame-thumb--polaroid"><div class="frame-thumb-inner"></div></div>
+              <span>拍立得</span>
+            </button>
+            <button class="frame-item" data-frame="film">
+              <div class="frame-thumb frame-thumb--film"><div class="frame-thumb-inner"></div></div>
+              <span>胶片感</span>
+            </button>
+            <button class="frame-item" data-frame="float">
+              <div class="frame-thumb frame-thumb--float"><div class="frame-thumb-inner"></div></div>
+              <span>极简浮空</span>
+            </button>
+            <button class="frame-item" data-frame="none">
+              <div class="frame-thumb frame-thumb--none"><div class="frame-thumb-inner"></div></div>
+              <span>仅照片</span>
+            </button>
+          </div>
+
+          <div class="sub-label">边框宽度</div>
+          <div class="slider-row">
+            <span class="slider-label">细</span>
+            <input type="range" class="slider" id="frameWidth" min="0" max="30" value="6">
+            <span class="slider-val" id="widthVal">6%</span>
+            <span class="slider-label">粗</span>
+          </div>
+
+          <div class="sub-label">边框颜色</div>
+          <div class="color-row">
+            <div class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></div>
+            <div class="color-swatch" style="background:#f5f0e8" data-color="#f5f0e8"></div>
+            <div class="color-swatch" style="background:#c8a96e" data-color="#c8a96e"></div>
+            <div class="color-swatch" style="background:#8fb2c9" data-color="#8fb2c9"></div>
+            <div class="color-swatch" style="background:#e89abe" data-color="#e89abe"></div>
+            <div class="color-swatch" style="background:#1a1a1a" data-color="#1a1a1a"></div>
+            <input type="color" class="color-custom" id="customColor" value="#ffffff">
+          </div>
+        </section>
+
+        <!-- 3. 照片调整 -->
+        <section class="panel-section">
+          <h3 class="panel-title">照片调整</h3>
+          <div class="sub-label">圆角程度</div>
+          <div class="slider-row">
+            <span class="slider-label">直角</span>
+            <input type="range" class="slider" id="cornerRadius" min="0" max="50" value="0">
+            <span class="slider-val" id="cornerVal">0</span>
+            <span class="slider-label">圆形</span>
+          </div>
+
+          <div class="sub-label">照片大小</div>
+          <div class="slider-row">
+            <span class="slider-label">缩小</span>
+            <input type="range" class="slider" id="photoScale" min="20" max="250" value="100">
+            <span class="slider-val" id="scaleVal">100%</span>
+            <span class="slider-label">放大</span>
+          </div>
+          <div class="drag-hint">✨ 拖动照片微调中心构图 · 拖动时自动显示网格辅助</div>
+        </section>
+
+        <!-- 4. 边缘阴影 -->
+        <section class="panel-section">
+          <h3 class="panel-title">装饰效果</h3>
+          <div class="shadow-row">
+            <button class="toggle-btn" id="shadowToggle">关 闭</button>
+            <div class="slider-row flex-1 shadow-slider-disabled" id="shadowSliderWrap">
+              <span class="slider-label">弱</span>
+              <input type="range" class="slider" id="shadowIntensity" min="1" max="15" value="5">
+              <span class="slider-label">强</span>
+            </div>
+          </div>
+          <div class="sub-label" style="margin-top: 10px;">边缘晕影强度</div>
+        </section>
+
+        <!-- 下载 -->
+        <button class="btn-download" id="btnDownload" disabled>
+          <span class="btn-icon">📥</span> 下载当前张
+        </button>
+        <p class="download-hint">导出 PNG · 保留原图分辨率</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <p>Made with ❤️ · 纯浏览器端处理，图片不会上传到任何服务器</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
