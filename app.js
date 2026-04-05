@@ -7,17 +7,58 @@
 // 状态树
 // ================================
 const state = {
-  items: [],        // { id, img, thumb, config: { ... } }
+  items: [],
   activeIndex: -1,
   isDragging: false,
   drag: { x: 0, y: 0, ox: 0, oy: 0 },
-  history: [],      // 撤销栈
-  redoStack: [],    // 重做栈
+  history: [],
+  redoStack: [],
   exportFormat: 'png',
   exportQuality: 0.92,
+  // 拼图模式
+  collageMode: false,
+  collageLayout: 'side-by-side',
+  collageGap: 2,          // 百分比
+  collageSlots: [],       // [{ itemIdx, offsetX, offsetY, scale }]
+  collageDragSlot: -1,    // 当前拖动的槽位索引
 };
 
 const MAX_HISTORY = 40;
+
+// 拼图布局模板（每个 region 是 0~1 的比例坐标）
+const COLLAGE_LAYOUTS = {
+  'side-by-side': {
+    slots: 2,
+    regions: [
+      { x: 0, y: 0, w: 0.5, h: 1 },
+      { x: 0.5, y: 0, w: 0.5, h: 1 }
+    ]
+  },
+  'top-bottom': {
+    slots: 2,
+    regions: [
+      { x: 0, y: 0, w: 1, h: 0.5 },
+      { x: 0, y: 0.5, w: 1, h: 0.5 }
+    ]
+  },
+  'grid-2x2': {
+    slots: 4,
+    regions: [
+      { x: 0, y: 0, w: 0.5, h: 0.5 },
+      { x: 0.5, y: 0, w: 0.5, h: 0.5 },
+      { x: 0, y: 0.5, w: 0.5, h: 0.5 },
+      { x: 0.5, y: 0.5, w: 0.5, h: 0.5 }
+    ]
+  },
+  'one-two': {
+    slots: 3,
+    regions: [
+      { x: 0, y: 0, w: 0.55, h: 1 },
+      { x: 0.55, y: 0, w: 0.45, h: 0.5 },
+      { x: 0.55, y: 0.5, w: 0.45, h: 0.5 }
+    ]
+  }
+};
 
 // 滤镜映射表
 const FILTERS = {
@@ -102,6 +143,13 @@ const els = {
   watermarkOptions: document.getElementById('watermarkOptions'),
   watermarkSize:  document.getElementById('watermarkSize'),
   watermarkSizeVal: document.getElementById('watermarkSizeVal'),
+  // 拼图
+  btnCollage:     document.getElementById('btnCollage'),
+  collagePanel:   document.getElementById('collagePanel'),
+  controlPanel:   document.getElementById('controlPanel'),
+  layoutGrid:     document.getElementById('layoutGrid'),
+  collageGap:     document.getElementById('collageGap'),
+  collageGapVal:  document.getElementById('collageGapVal'),
 };
 
 // ================================
@@ -110,7 +158,11 @@ const els = {
 let rafId = null;
 const scheduleRender = () => {
   if (rafId) cancelAnimationFrame(rafId);
-  rafId = requestAnimationFrame(() => { render(); rafId = null; });
+  rafId = requestAnimationFrame(() => {
+    if (state.collageMode) renderCollage();
+    else render();
+    rafId = null;
+  });
 };
 
 // ================================
@@ -307,7 +359,28 @@ function bindControlEvents() {
   els.btnRedo.onclick = redo;
   els.btnSyncAll.onclick = syncAllConfigs;
   els.btnDownloadAll.onclick = batchDownload;
-  els.btnDownload.onclick = () => downloadOne(getActiveItem());
+  els.btnDownload.onclick = () => {
+    if (state.collageMode) { downloadCollage(); }
+    else { downloadOne(getActiveItem()); }
+  };
+
+  // 拼图模式
+  els.btnCollage.onclick = toggleCollageMode;
+  els.layoutGrid.addEventListener('click', (e) => {
+    const btn = e.target.closest('.layout-item');
+    if (!btn) return;
+    state.collageLayout = btn.dataset.layout;
+    initCollageSlots();
+    els.layoutGrid.querySelectorAll('.layout-item').forEach(b => 
+      b.classList.toggle('active', b.dataset.layout === state.collageLayout)
+    );
+    scheduleRender();
+  });
+  els.collageGap.oninput = (e) => {
+    state.collageGap = parseInt(e.target.value);
+    els.collageGapVal.textContent = e.target.value + '%';
+    scheduleRender();
+  };
 
   // 自定义比例
   document.getElementById('btnApplyCustomRatio').onclick = () => {
@@ -591,6 +664,7 @@ function deleteItem(index) {
 // ================================
 function startDrag(e) {
   if (!state.items.length) return;
+  if (state.collageMode) { startCollageDrag(e); return; }
   const item = getActiveItem();
   state.isDragging = true;
   state.drag.x = e.clientX;
@@ -603,6 +677,7 @@ function startDrag(e) {
 
 function doDrag(e) {
   if (!state.isDragging) return;
+  if (state.collageMode) { doCollageDrag(e); return; }
   const item = getActiveItem();
   const rect = els.canvas.getBoundingClientRect();
   const scale = els.canvas.width / rect.width;
@@ -613,6 +688,7 @@ function doDrag(e) {
 
 function stopDrag() {
   if (state.isDragging) {
+    if (state.collageMode) { stopCollageDrag(); return; }
     state.isDragging = false;
     els.canvas.style.cursor = 'grab';
     scheduleRender();
@@ -1000,6 +1076,250 @@ function showToast(msg) {
   toast.style.opacity = '1';
   clearTimeout(toast._timer);
   toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+}
+
+// ================================
+// 拼图模式
+// ================================
+
+function toggleCollageMode() {
+  if (state.items.length < 2) {
+    showToast('至少需要 2 张照片才能使用拼图');
+    return;
+  }
+  state.collageMode = !state.collageMode;
+  els.btnCollage.classList.toggle('active', state.collageMode);
+  els.collagePanel.hidden = !state.collageMode;
+  // 拼图模式下隐藏普通控制面板的比例/照片调整区
+  // 但保留边框、滤镜、导出等共享控件
+  if (state.collageMode) {
+    initCollageSlots();
+  }
+  scheduleRender();
+}
+
+function initCollageSlots() {
+  const layout = COLLAGE_LAYOUTS[state.collageLayout];
+  if (!layout) return;
+  state.collageSlots = [];
+  for (let i = 0; i < layout.slots; i++) {
+    state.collageSlots.push({
+      itemIdx: i < state.items.length ? i : i % state.items.length,
+      offsetX: 0,
+      offsetY: 0,
+      scale: 1.0
+    });
+  }
+}
+
+/**
+ * 拼图渲染：多张照片绘制在同一 Canvas
+ */
+function renderCollage() {
+  if (!state.items.length) return;
+  const layout = COLLAGE_LAYOUTS[state.collageLayout];
+  if (!layout) return;
+  
+  // 使用第一张图的配置作为共享配置
+  const cfg = state.items[0].config;
+  const ctx = els.ctx;
+  
+  // 计算画布尺寸（使用固定基准）
+  const baseSize = 2400;
+  let canvasW, canvasH;
+  if (cfg.aspectRatio === 'original') {
+    // 拼图模式下 original 默认为 4:3
+    canvasW = baseSize;
+    canvasH = Math.round(baseSize * 3 / 4);
+  } else {
+    const [rw, rh] = cfg.aspectRatio.split(':').map(Number);
+    canvasW = baseSize;
+    canvasH = Math.round(baseSize * rh / rw);
+  }
+  
+  els.canvas.width = canvasW;
+  els.canvas.height = canvasH;
+  
+  // 边框参数
+  const borderPct = cfg.frameType === 'none' ? 0 : cfg.frameWidth;
+  const border = Math.round(Math.min(canvasW, canvasH) * borderPct / 100);
+  const gapPx = Math.round(Math.min(canvasW, canvasH) * state.collageGap / 100);
+  
+  // 背景
+  if (cfg.frameType !== 'none') {
+    if (cfg.gradientOn) {
+      const grad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
+      grad.addColorStop(0, cfg.frameColor);
+      grad.addColorStop(1, cfg.gradientColor2);
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = cfg.frameColor;
+    }
+    ctx.fillRect(0, 0, canvasW, canvasH);
+  }
+  
+  // 绘制区域
+  const innerX = border;
+  const innerY = border;
+  const innerW = canvasW - border * 2;
+  const innerH = canvasH - border * 2;
+  
+  // 绘制每个槽位
+  layout.regions.forEach((region, slotIdx) => {
+    const slot = state.collageSlots[slotIdx];
+    if (!slot) return;
+    const item = state.items[slot.itemIdx];
+    if (!item) return;
+    
+    // 计算槽位在 Canvas 上的像素位置
+    const halfGap = gapPx / 2;
+    const rx = innerX + region.x * innerW + halfGap;
+    const ry = innerY + region.y * innerH + halfGap;
+    const rw = region.w * innerW - gapPx;
+    const rh = region.h * innerH - gapPx;
+    
+    if (rw <= 0 || rh <= 0) return;
+    
+    // 圆角
+    const pR = Math.min(rw, rh) / 2 * cfg.cornerRadius / 50;
+    
+    ctx.save();
+    roundRectPath(ctx, rx, ry, rw, rh, pR);
+    ctx.clip();
+    
+    // 滤镜
+    const filterStr = FILTERS[cfg.filter] || 'none';
+    if (filterStr !== 'none') ctx.filter = filterStr;
+    
+    // Cover 模式填充：照片填满槽位区域
+    const img = item.previewImg || item.img;
+    const imgAspect = img.width / img.height;
+    const slotAspect = rw / rh;
+    let drawW, drawH;
+    if (imgAspect > slotAspect) {
+      drawH = rh * slot.scale;
+      drawW = drawH * imgAspect;
+    } else {
+      drawW = rw * slot.scale;
+      drawH = drawW / imgAspect;
+    }
+    const drawX = rx + (rw - drawW) / 2 + slot.offsetX;
+    const drawY = ry + (rh - drawH) / 2 + slot.offsetY;
+    
+    ctx.drawImage(img, drawX, drawY, drawW, drawH);
+    ctx.filter = 'none';
+    ctx.restore();
+  });
+  
+  // 水印
+  if (cfg.watermarkOn && cfg.watermarkText) {
+    drawWatermark(ctx, cfg, canvasW, canvasH, border, border, border, border);
+  }
+  
+  fitDisplay();
+}
+
+/**
+ * 拼图模式拖拽：判断点击落在哪个槽位
+ */
+function startCollageDrag(e) {
+  const layout = COLLAGE_LAYOUTS[state.collageLayout];
+  if (!layout) return;
+  
+  const rect = els.canvas.getBoundingClientRect();
+  const scaleX = els.canvas.width / rect.width;
+  const scaleY = els.canvas.height / rect.height;
+  const cx = (e.clientX - rect.left) * scaleX;
+  const cy = (e.clientY - rect.top) * scaleY;
+  
+  const cfg = state.items[0].config;
+  const borderPct = cfg.frameType === 'none' ? 0 : cfg.frameWidth;
+  const border = Math.round(Math.min(els.canvas.width, els.canvas.height) * borderPct / 100);
+  const innerX = border, innerY = border;
+  const innerW = els.canvas.width - border * 2;
+  const innerH = els.canvas.height - border * 2;
+  
+  // 找到点击所在的槽位
+  let hitSlot = -1;
+  layout.regions.forEach((region, idx) => {
+    const rx = innerX + region.x * innerW;
+    const ry = innerY + region.y * innerH;
+    const rw = region.w * innerW;
+    const rh = region.h * innerH;
+    if (cx >= rx && cx <= rx + rw && cy >= ry && cy <= ry + rh) {
+      hitSlot = idx;
+    }
+  });
+  
+  if (hitSlot >= 0 && state.collageSlots[hitSlot]) {
+    state.collageDragSlot = hitSlot;
+    state.isDragging = true;
+    state.drag.x = e.clientX;
+    state.drag.y = e.clientY;
+    state.drag.ox = state.collageSlots[hitSlot].offsetX;
+    state.drag.oy = state.collageSlots[hitSlot].offsetY;
+    els.canvas.style.cursor = 'grabbing';
+  }
+}
+
+function doCollageDrag(e) {
+  if (!state.isDragging || state.collageDragSlot < 0) return;
+  const slot = state.collageSlots[state.collageDragSlot];
+  if (!slot) return;
+  const rect = els.canvas.getBoundingClientRect();
+  const scale = els.canvas.width / rect.width;
+  slot.offsetX = state.drag.ox + (e.clientX - state.drag.x) * scale;
+  slot.offsetY = state.drag.oy + (e.clientY - state.drag.y) * scale;
+  scheduleRender();
+}
+
+function stopCollageDrag() {
+  if (state.isDragging && state.collageDragSlot >= 0) {
+    state.isDragging = false;
+    state.collageDragSlot = -1;
+    els.canvas.style.cursor = 'grab';
+  }
+}
+
+/**
+ * 拼图导出
+ */
+function downloadCollage() {
+  const offscreen = document.createElement('canvas');
+  const offCtx = offscreen.getContext('2d');
+  
+  const origCtx = els.ctx;
+  const origCanvas = els.canvas;
+  els.ctx = offCtx;
+  els.canvas = offscreen;
+  
+  // 导出时用原图
+  const savedPreviews = state.collageSlots.map(slot => {
+    const item = state.items[slot.itemIdx];
+    const saved = item?.previewImg;
+    if (item) item.previewImg = item.img;
+    return saved;
+  });
+  
+  renderCollage();
+  
+  const mime = state.exportFormat === 'jpeg' ? 'image/jpeg' : 'image/png';
+  const quality = state.exportFormat === 'jpeg' ? state.exportQuality : 1.0;
+  const ext = state.exportFormat === 'jpeg' ? '.jpg' : '.png';
+  
+  const link = document.createElement('a');
+  link.download = 'framer_collage' + ext;
+  link.href = offscreen.toDataURL(mime, quality);
+  link.click();
+  
+  // 还原
+  state.collageSlots.forEach((slot, i) => {
+    const item = state.items[slot.itemIdx];
+    if (item) item.previewImg = savedPreviews[i];
+  });
+  els.ctx = origCtx;
+  els.canvas = origCanvas;
+  scheduleRender();
 }
 
 // 启动

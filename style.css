@@ -380,3 +380,44 @@ body {
 }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ================================
+   拼图模式
+   ================================ */
+.btn-collage {
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  color: #fff; border: none; border-radius: var(--radius-sm);
+  padding: 6px 14px; font-size: 12px; font-weight: 600; cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-collage:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(124,107,255,0.4); }
+.btn-collage.active {
+  background: #fff; color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.collage-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  animation: fadeIn 0.3s ease;
+}
+
+.layout-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.layout-item {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: var(--surface-2); border: 2px solid transparent;
+  border-radius: var(--radius-sm); padding: 10px 4px;
+  cursor: pointer; transition: all var(--transition); color: var(--text-muted);
+}
+.layout-item svg { width: 40px; height: 30px; }
+.layout-item span { font-size: 10px; }
+.layout-item:hover { background: var(--surface-3); color: var(--text-primary); }
+.layout-item.active {
+  border-color: var(--accent); background: var(--accent-dim);
+  color: var(--accent);
+}
