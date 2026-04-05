@@ -1198,20 +1198,27 @@ async function addPhotosToCollage(files) {
   for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
     const imgData = await loadCollageImage(file);
-    // 计算默认大小和位置（居中，适应画布）
+    // 计算默认大小（根据图层数自适应缩小）
     const { w: CW, h: CH } = getCollageSize();
-    const maxW = CW * 0.6;
-    const maxH = CH * 0.6;
+    const totalAfter = state.collageLayers.length + 1;
+    const sizeFactor = totalAfter <= 2 ? 0.5 : totalAfter <= 4 ? 0.4 : 0.3;
+    const maxW = CW * sizeFactor;
+    const maxH = CH * sizeFactor;
     const ratio = Math.min(maxW / imgData.img.width, maxH / imgData.img.height, 1);
     const w = Math.round(imgData.img.width * ratio);
     const h = Math.round(imgData.img.height * ratio);
-    // 偏移避免完全重叠
-    const offset = state.collageLayers.length * 60;
+    // 偏移避免完全重叠（按序散开）
+    const idx = state.collageLayers.length;
+    const cols = Math.ceil(Math.sqrt(totalAfter));
+    const col = idx % cols;
+    const row = Math.floor(idx / cols);
+    const cellW = CW / cols;
+    const cellH = CH / Math.ceil(totalAfter / cols);
     state.collageLayers.push({
       img: imgData.img,
       previewImg: imgData.previewImg,
-      x: Math.round((CW - w) / 2) + offset,
-      y: Math.round((CH - h) / 2) + offset,
+      x: Math.round(col * cellW + (cellW - w) / 2),
+      y: Math.round(row * cellH + (cellH - h) / 2),
       w, h,
       cornerRadius: 0,
       borderWidth: 0,
@@ -1245,21 +1252,38 @@ function loadCollageImage(file) {
 
 /** 布局模板：重新排列当前图层 */
 function initCollageLayers() {
-  const layout = COLLAGE_LAYOUTS[state.collageLayout];
-  if (!layout || !state.collageLayers.length) return;
+  if (!state.collageLayers.length) return;
+  const { w: CW, h: CH } = getCollageSize();
   const gap = 30;
   const count = state.collageLayers.length;
-  // 对已有图层应用布局位置
-  state.collageLayers.forEach((layer, i) => {
-    const regionIdx = i % layout.regions.length;
-    const r = layout.regions[regionIdx];
-    const { w: CW, h: CH } = getCollageSize();
-    layer.x = Math.round(r.x * CW + gap);
-    layer.y = Math.round(r.y * CH + gap);
-    layer.w = Math.round(r.w * CW - gap * 2);
-    layer.h = Math.round(r.h * CH - gap * 2);
-    layer.zIndex = i;
-  });
+  const layout = COLLAGE_LAYOUTS[state.collageLayout];
+
+  // 如果模板region数 >= 图层数，直接用模板；否则自动均分网格
+  if (layout && layout.regions.length >= count) {
+    state.collageLayers.forEach((layer, i) => {
+      const r = layout.regions[i];
+      layer.x = Math.round(r.x * CW + gap);
+      layer.y = Math.round(r.y * CH + gap);
+      layer.w = Math.round(r.w * CW - gap * 2);
+      layer.h = Math.round(r.h * CH - gap * 2);
+      layer.zIndex = i;
+    });
+  } else {
+    // 自动网格：根据图层数计算行列
+    const cols = Math.ceil(Math.sqrt(count));
+    const rows = Math.ceil(count / cols);
+    const cellW = CW / cols;
+    const cellH = CH / rows;
+    state.collageLayers.forEach((layer, i) => {
+      const col = i % cols;
+      const row = Math.floor(i / cols);
+      layer.x = Math.round(col * cellW + gap);
+      layer.y = Math.round(row * cellH + gap);
+      layer.w = Math.round(cellW - gap * 2);
+      layer.h = Math.round(cellH - gap * 2);
+      layer.zIndex = i;
+    });
+  }
   state.selectedLayerIdx = 0;
   syncLayerUI();
 }
