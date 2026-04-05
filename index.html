@@ -245,18 +245,18 @@
         <!-- 4. 质感与特效 -->
         <section class="panel-section">
           <h3 class="panel-title">质感与特效</h3>
-          <div class="sub-label">隔离缝隙 (Inner Border)</div>
+          <div class="sub-label">边缘融合特效 (Edge Blend)</div>
           <div class="shadow-row">
             <button class="toggle-btn" id="strokeToggle">关 闭</button>
             <div class="slider-row flex-1 shadow-slider-disabled" id="strokeSliderWrap">
-              <span class="slider-label">细</span>
-              <input type="range" class="slider" id="strokeWidth" min="1" max="15" value="2">
-              <span class="slider-label">粗</span>
+              <span class="slider-label">弱</span>
+              <input type="range" class="slider" id="strokeWidth" min="1" max="15" value="8">
+              <span class="slider-label">强</span>
             </div>
           </div>
           <div class="export-row" style="margin-top: 8px;" id="strokeColorOptions" hidden>
-            <button class="export-fmt active" data-scolor="rgba(255,255,255,0.7)" id="scolorWhite">亮边 (适合暗背景)</button>
-            <button class="export-fmt" data-scolor="rgba(0,0,0,0.5)" id="scolorBlack">暗边 (适合亮背景)</button>
+            <button class="export-fmt active" data-scolor="rgba(0,0,0,0.5)" id="scolorBlack">无缝溶解 (内侧羽化)</button>
+            <button class="export-fmt" data-scolor="rgba(255,255,255,0.7)" id="scolorWhite">环境光晕 (外侧散焦)</button>
           </div>
 
           <div class="sub-label" style="margin-top: 16px;">镜头暗角 (Vignette)</div>

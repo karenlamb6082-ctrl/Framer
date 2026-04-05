@@ -82,8 +82,8 @@ const createDefaultConfig = (frame = 'white') => ({
   shadowOn:     false,
   shadowIntensity: 6,
   photoStrokeOn: true,
-  photoStrokeWidth: 1,
-  photoStrokeColor: 'rgba(255,255,255,0.7)',
+  photoStrokeWidth: 8,
+  photoStrokeColor: 'rgba(0,0,0,0.5)',
   watermarkOn:  false,
   watermarkText: '',
   watermarkPos: 'center',
@@ -841,45 +841,40 @@ function render() {
     ctx.restore();
   }
 
-  // 4. 绘制照片 (裁剪圆角 + 滤镜)
+  // 3.5 环境光晕 (Outer Glow)
+  if (cfg.photoStrokeOn && cfg.photoStrokeColor === 'rgba(255,255,255,0.7)' && cfg.photoStrokeWidth > 0) {
+    ctx.save();
+    const dynamicBase = Math.max(canvasW, canvasH);
+    const blurRadius = Math.round(dynamicBase * cfg.photoStrokeWidth / 200);
+    ctx.shadowColor = cfg.frameColor === '#ffffff' ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)';
+    ctx.shadowBlur = blurRadius;
+    ctx.fillStyle = cfg.frameColor === '#ffffff' ? 'rgba(0,0,0,1)' : 'rgba(255,255,255,1)';
+    roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // 4. 绘制照片 (裁剪圆角)
   // 预览时使用降采样图提高性能，导出时用原图
   const renderImg = item.previewImg || item.img;
   ctx.save();
   roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
   ctx.clip();
   ctx.drawImage(renderImg, drawX, drawY, drawnW, drawnH);
-  ctx.restore();
 
-  // 4.5极简画廊卡纸装裱缝隙 (V-Groove / Float Mount)
-  if (cfg.photoStrokeOn && cfg.photoStrokeWidth > 0) {
-    ctx.save();
-    // 1. 降低线条的生硬度：线宽应该非常克制，即便推到最大也不应变成粗框
+  // 4.5 边缘无缝溶解羽化 (Inner Feather Fade)
+  if (cfg.photoStrokeOn && cfg.photoStrokeColor === 'rgba(0,0,0,0.5)' && cfg.photoStrokeWidth > 0) {
     const dynamicBase = Math.max(canvasW, canvasH);
-    const lw = Math.max(1, Math.round(dynamicBase * cfg.photoStrokeWidth / 4000));
-    
-    // 2. 赋予物理空间感 (呼吸留白)：线条不应像贴纸一样锁死在照片边缘，而是离开边缘一段距离（V型槽工艺）
-    const gap = Math.max(4, Math.round(dynamicBase * 0.008)); // 例如在 3000px 画布上产生 24px 的呼吸缝
-    
-    // 3. 压暗透明度，拒绝强烈的刺眼感：无论用户选择多亮的颜色，强制叠加一次全局透明度，使其融入底色
-    ctx.globalAlpha = 0.35; 
-    
-    ctx.strokeStyle = cfg.photoStrokeColor;
-    ctx.lineWidth = lw;
-    
-    // 绘制在外围
-    const outR = pR > 0 ? pR + gap : 0;
-    roundRectPath(ctx, drawX - gap, drawY - gap, drawnW + gap * 2, drawnH + gap * 2, outR);
+    const blurRadius = Math.round(dynamicBase * cfg.photoStrokeWidth / 150);
+    ctx.strokeStyle = cfg.frameColor;
+    ctx.lineWidth = blurRadius;
+    ctx.shadowColor = cfg.frameColor;
+    ctx.shadowBlur = blurRadius * 1.5;
+    // 由于之前已经 ctx.clip() 限定在照片边缘内侧，这道带有高斯模糊的粗线只会向内渗透，制造完美的图片融入背景的错觉。
+    roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
     ctx.stroke();
-
-    // 加强一层极弱的内层反光（增加立体的纸板割切厚度感），这让它终于看起来不再是“画上去的一条线”，而是“刻下去的一道缝”
-    ctx.globalAlpha = 0.15;
-    ctx.lineWidth = Math.max(1, lw * 0.5);
-    ctx.strokeStyle = cfg.photoStrokeColor === 'rgba(0,0,0,0.5)' ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,1)';
-    roundRectPath(ctx, drawX - gap + lw/2, drawY - gap + lw/2, drawnW + gap * 2 - lw, drawnH + gap * 2 - lw, Math.max(0, outR - lw/2));
-    ctx.stroke();
-
-    ctx.restore();
   }
+  ctx.restore();
 
   // 5. 装饰层：Museum 艺术装裱增强（增加卡纸凹陷感）
   if (cfg.frameType === 'museum' && bT > 0) {
