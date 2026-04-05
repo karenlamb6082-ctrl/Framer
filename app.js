@@ -18,6 +18,7 @@ const state = {
   // 拼图模式（独立功能，不依赖 state.items）
   collageMode: false,
   collageLayout: 'side-by-side',
+  collageRatio: '4:3',
   collageBg: '#ffffff',
   collageLayers: [],        // [{ img, previewImg, x, y, w, h, cornerRadius, borderWidth, borderColor, zIndex }]
   selectedLayerIdx: -1,
@@ -439,6 +440,15 @@ function bindControlEvents() {
     addPhotosToCollage(e.target.files);
     e.target.value = '';
   };
+  // 拼图画布比例
+  document.querySelectorAll('[data-cratio]').forEach(btn => {
+    btn.onclick = () => {
+      state.collageRatio = btn.dataset.cratio;
+      document.querySelectorAll('[data-cratio]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      scheduleRender();
+    };
+  });
 
   // 自定义比例
   document.getElementById('btnApplyCustomRatio').onclick = () => {
@@ -721,8 +731,8 @@ function deleteItem(index) {
 // 拖拽逻辑
 // ================================
 function startDrag(e) {
-  if (!state.items.length) return;
   if (state.collageMode) { startCollageDrag(e); return; }
+  if (!state.items.length) return;
   const item = getActiveItem();
   state.isDragging = true;
   state.drag.x = e.clientX;
@@ -734,8 +744,8 @@ function startDrag(e) {
 }
 
 function doDrag(e) {
-  if (!state.isDragging) return;
   if (state.collageMode) { doCollageDrag(e); return; }
+  if (!state.isDragging) return;
   const item = getActiveItem();
   const rect = els.canvas.getBoundingClientRect();
   const scale = els.canvas.width / rect.width;
@@ -1189,8 +1199,9 @@ async function addPhotosToCollage(files) {
     if (!file.type.startsWith('image/')) continue;
     const imgData = await loadCollageImage(file);
     // 计算默认大小和位置（居中，适应画布）
-    const maxW = COLLAGE_W * 0.6;
-    const maxH = COLLAGE_H * 0.6;
+    const { w: CW, h: CH } = getCollageSize();
+    const maxW = CW * 0.6;
+    const maxH = CH * 0.6;
     const ratio = Math.min(maxW / imgData.img.width, maxH / imgData.img.height, 1);
     const w = Math.round(imgData.img.width * ratio);
     const h = Math.round(imgData.img.height * ratio);
@@ -1199,8 +1210,8 @@ async function addPhotosToCollage(files) {
     state.collageLayers.push({
       img: imgData.img,
       previewImg: imgData.previewImg,
-      x: Math.round((COLLAGE_W - w) / 2) + offset,
-      y: Math.round((COLLAGE_H - h) / 2) + offset,
+      x: Math.round((CW - w) / 2) + offset,
+      y: Math.round((CH - h) / 2) + offset,
       w, h,
       cornerRadius: 0,
       borderWidth: 0,
@@ -1242,10 +1253,11 @@ function initCollageLayers() {
   state.collageLayers.forEach((layer, i) => {
     const regionIdx = i % layout.regions.length;
     const r = layout.regions[regionIdx];
-    layer.x = Math.round(r.x * COLLAGE_W + gap);
-    layer.y = Math.round(r.y * COLLAGE_H + gap);
-    layer.w = Math.round(r.w * COLLAGE_W - gap * 2);
-    layer.h = Math.round(r.h * COLLAGE_H - gap * 2);
+    const { w: CW, h: CH } = getCollageSize();
+    layer.x = Math.round(r.x * CW + gap);
+    layer.y = Math.round(r.y * CH + gap);
+    layer.w = Math.round(r.w * CW - gap * 2);
+    layer.h = Math.round(r.h * CH - gap * 2);
     layer.zIndex = i;
   });
   state.selectedLayerIdx = 0;
@@ -1276,21 +1288,28 @@ function moveLayer(dir) {
   scheduleRender();
 }
 
+function getCollageSize() {
+  const base = 2400;
+  const [rw, rh] = state.collageRatio.split(':').map(Number);
+  return { w: base, h: Math.round(base * rh / rw) };
+}
+
 function renderCollage() {
+  const { w: CW, h: CH } = getCollageSize();
   const ctx = els.ctx;
-  els.canvas.width = COLLAGE_W;
-  els.canvas.height = COLLAGE_H;
+  els.canvas.width = CW;
+  els.canvas.height = CH;
 
   // 画布背景
   ctx.fillStyle = state.collageBg;
-  ctx.fillRect(0, 0, COLLAGE_W, COLLAGE_H);
+  ctx.fillRect(0, 0, CW, CH);
 
   if (!state.collageLayers.length) {
     // 空画布提示
     ctx.fillStyle = 'rgba(255,255,255,0.15)';
     ctx.font = 'bold 48px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('点击「+ 添加照片」开始拼图', COLLAGE_W / 2, COLLAGE_H / 2);
+    ctx.fillText('点击「+ 添加照片」开始拼图', CW / 2, CH / 2);
     fitDisplay();
     return;
   }
