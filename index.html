@@ -3,11 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Framer | 高级照片边框编辑器</title>
-  <meta name="description" content="纯前端高级照片边框编辑器，支持批量处理、圆角、缩放、阴影及多种比例导出。">
+  <title>Framer | 高级照片边框编辑器 - 免费在线工具</title>
+  <meta name="description" content="Framer 是一款纯前端照片边框编辑器，支持 7 种边框预设、6 种滤镜、渐变边框、水印文字、批量处理。所有操作在浏览器完成，隐私安全。">
+  <meta name="keywords" content="照片边框,图片编辑器,在线工具,滤镜,水印,批量处理">
+  <!-- Open Graph -->
+  <meta property="og:title" content="Framer - 高级照片边框编辑器">
+  <meta property="og:description" content="免费在线照片边框工具，支持滤镜、渐变边框、水印、批量导出，纯浏览器处理，隐私安全。">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://netclaw.asia">
+  <meta property="og:locale" content="zh_CN">
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#7c6bff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <script>
+    // 注册 Service Worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
 
   <header class="header">
     <div class="header-inner">
@@ -15,7 +33,7 @@
         <span class="logo-icon">🖼️</span>
         <span class="logo-text">Framer</span>
       </div>
-      <div class="header-sub">高级照片边框编辑器 · V3 Pro</div>
+      <div class="header-sub">高级照片边框编辑器 · V4</div>
       <div class="flex-1"></div>
       <div class="batch-actions" id="batchActions" hidden>
         <button class="btn-undo" id="btnUndo" disabled title="撤销 (Ctrl+Z)">↩ 撤销</button>

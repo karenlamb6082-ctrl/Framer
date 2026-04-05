@@ -350,22 +350,29 @@ async function handleFiles(files) {
   scheduleRender();
 }
 
+const PREVIEW_MAX = 3000; // 大于此尺寸，预览使用降采样
+
 async function createItemFromFile(file) {
   return new Promise(resolve => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        // 生成缩略图以便 UI 展示
         const thumb = createThumb(img);
-        // 如果已有图片，新图片继承当前选中的配置（用户体验：复制上一张）
         const baseConfig = state.activeIndex >= 0 ? 
           { ...state.items[state.activeIndex].config, photoOffsetX: 0, photoOffsetY: 0, photoScale: 1.0 } : 
           createDefaultConfig();
+        
+        // 大图性能优化：生成降采样预览图
+        let previewImg = img;
+        if (img.width > PREVIEW_MAX || img.height > PREVIEW_MAX) {
+          previewImg = createPreview(img);
+        }
           
         resolve({
           id: Date.now() + Math.random(),
-          img: img,
+          img: img,          // 原图（导出用）
+          previewImg: previewImg,  // 预览图（渲染用）
           thumb: thumb,
           config: baseConfig
         });
@@ -374,6 +381,24 @@ async function createItemFromFile(file) {
     };
     reader.readAsDataURL(file);
   });
+}
+
+/**
+ * 大图降采样：生成等比缩小到 PREVIEW_MAX 的预览图
+ */
+function createPreview(img) {
+  const scale = PREVIEW_MAX / Math.max(img.width, img.height);
+  const c = document.createElement('canvas');
+  c.width = Math.round(img.width * scale);
+  c.height = Math.round(img.height * scale);
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  const preview = new Image();
+  preview.src = c.toDataURL('image/jpeg', 0.9);
+  // 同步宽高参数（用于 computeDims）
+  preview.width = c.width;
+  preview.height = c.height;
+  return preview;
 }
 
 function createThumb(img) {
@@ -658,13 +683,15 @@ function render() {
   }
 
   // 4. 绘制照片 (裁剪圆角 + 滤镜)
+  // 预览时使用降采样图提高性能，导出时用原图
+  const renderImg = item.previewImg || item.img;
   ctx.save();
   roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
   ctx.clip();
   // 应用滤镜
   const filterStr = FILTERS[cfg.filter] || 'none';
   if (filterStr !== 'none') ctx.filter = filterStr;
-  ctx.drawImage(item.img, drawX, drawY, drawnW, drawnH);
+  ctx.drawImage(renderImg, drawX, drawY, drawnW, drawnH);
   ctx.filter = 'none'; // 重置，避免影响后续装饰层
   ctx.restore();
 
@@ -928,6 +955,10 @@ function downloadOne(item, filename = 'framer_photo.png') {
   const origCanvas = els.canvas;
   els.canvas = offscreen;
   
+  // 导出时强制使用原图（非降采样）
+  const savedPreview = item.previewImg;
+  item.previewImg = item.img;
+  
   const savedIndex = state.activeIndex;
   state.activeIndex = state.items.indexOf(item);
   render();
@@ -944,6 +975,7 @@ function downloadOne(item, filename = 'framer_photo.png') {
   link.click();
   
   // 还原
+  item.previewImg = savedPreview;
   els.ctx = origCtx;
   els.canvas = origCanvas;
   state.activeIndex = savedIndex;
