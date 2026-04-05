@@ -74,7 +74,7 @@
       <!-- 拼图控制面板 -->
       <div class="collage-panel" id="collagePanel" hidden>
         <section class="panel-section">
-          <h3 class="panel-title">布局模板</h3>
+          <h3 class="panel-title">快速布局</h3>
           <div class="layout-grid" id="layoutGrid">
             <button class="layout-item active" data-layout="side-by-side" title="左右并排">
               <svg viewBox="0 0 40 30"><rect x="1" y="1" width="18" height="28" rx="2" fill="currentColor" opacity="0.6"/><rect x="21" y="1" width="18" height="28" rx="2" fill="currentColor" opacity="0.4"/></svg>
@@ -86,7 +86,7 @@
             </button>
             <button class="layout-item" data-layout="grid-2x2" title="四宫格">
               <svg viewBox="0 0 40 30"><rect x="1" y="1" width="18" height="13" rx="2" fill="currentColor" opacity="0.6"/><rect x="21" y="1" width="18" height="13" rx="2" fill="currentColor" opacity="0.5"/><rect x="1" y="16" width="18" height="13" rx="2" fill="currentColor" opacity="0.4"/><rect x="21" y="16" width="18" height="13" rx="2" fill="currentColor" opacity="0.3"/></svg>
-              <span>2×2</span>
+              <span>2x2</span>
             </button>
             <button class="layout-item" data-layout="one-two" title="1大+2小">
               <svg viewBox="0 0 40 30"><rect x="1" y="1" width="20" height="28" rx="2" fill="currentColor" opacity="0.6"/><rect x="23" y="1" width="16" height="13" rx="2" fill="currentColor" opacity="0.4"/><rect x="23" y="16" width="16" height="13" rx="2" fill="currentColor" opacity="0.3"/></svg>
@@ -94,17 +94,43 @@
             </button>
           </div>
         </section>
-        <section class="panel-section">
-          <div class="sub-label">照片间距</div>
+        <section class="panel-section" id="layerControls">
+          <h3 class="panel-title">选中照片 <span id="layerLabel">未选择</span></h3>
+          <div class="sub-label">圆角</div>
+          <div class="slider-row">
+            <span class="slider-label">直角</span>
+            <input type="range" class="slider" id="layerRadius" min="0" max="50" value="0" title="圆角">
+            <span class="slider-val" id="layerRadiusVal">0</span>
+            <span class="slider-label">圆</span>
+          </div>
+          <div class="sub-label">边框宽度</div>
           <div class="slider-row">
             <span class="slider-label">无</span>
-            <input type="range" class="slider" id="collageGap" min="0" max="8" value="2" title="照片间距">
-            <span class="slider-val" id="collageGapVal">2%</span>
-            <span class="slider-label">宽</span>
+            <input type="range" class="slider" id="layerBorder" min="0" max="15" value="0" title="边框">
+            <span class="slider-val" id="layerBorderVal">0%</span>
+            <span class="slider-label">粗</span>
+          </div>
+          <div class="sub-label">边框颜色</div>
+          <div class="color-row">
+            <div class="color-swatch active" data-lcolor="#ffffff"></div>
+            <div class="color-swatch" data-lcolor="#1a1a1a"></div>
+            <div class="color-swatch" data-lcolor="#f5f0e8"></div>
+            <input type="color" class="color-custom" id="layerColorPicker" value="#ffffff" title="颜色">
+          </div>
+          <div class="layer-actions">
+            <button class="btn-undo" id="layerUp">上移一层</button>
+            <button class="btn-undo" id="layerDown">下移一层</button>
           </div>
         </section>
         <section class="panel-section">
-          <div class="sub-label">拖动拼图中的照片微调位置，点击缩略图切换槽位</div>
+          <div class="sub-label">画布背景</div>
+          <div class="color-row">
+            <div class="color-swatch active" data-bgc="#ffffff"></div>
+            <div class="color-swatch" data-bgc="#1a1a1a"></div>
+            <div class="color-swatch" data-bgc="#f5f0e8"></div>
+            <input type="color" class="color-custom" id="collageBgPicker" value="#ffffff" title="背景色">
+          </div>
+          <div class="sub-label">点击选中 · 拖动移动 · 角落缩放</div>
         </section>
       </div>
 

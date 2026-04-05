@@ -18,9 +18,10 @@ const state = {
   // 拼图模式
   collageMode: false,
   collageLayout: 'side-by-side',
-  collageGap: 2,          // 百分比
-  collageSlots: [],       // [{ itemIdx, offsetX, offsetY, scale }]
-  collageDragSlot: -1,    // 当前拖动的槽位索引
+  collageBg: '#ffffff',     // 画布背景色
+  collageLayers: [],        // [{ itemIdx, x, y, w, h, cornerRadius, borderWidth, borderColor, zIndex }]
+  selectedLayerIdx: -1,     // 当前选中的图层
+  layerDragMode: null,      // 'move' | 'resize-nw/ne/sw/se' | null
 };
 
 const MAX_HISTORY = 40;
@@ -148,8 +149,15 @@ const els = {
   collagePanel:   document.getElementById('collagePanel'),
   controlPanel:   document.getElementById('controlPanel'),
   layoutGrid:     document.getElementById('layoutGrid'),
-  collageGap:     document.getElementById('collageGap'),
-  collageGapVal:  document.getElementById('collageGapVal'),
+  layerLabel:     document.getElementById('layerLabel'),
+  layerRadius:    document.getElementById('layerRadius'),
+  layerRadiusVal: document.getElementById('layerRadiusVal'),
+  layerBorder:    document.getElementById('layerBorder'),
+  layerBorderVal: document.getElementById('layerBorderVal'),
+  layerColorPicker: document.getElementById('layerColorPicker'),
+  layerUp:        document.getElementById('layerUp'),
+  layerDown:      document.getElementById('layerDown'),
+  collageBgPicker: document.getElementById('collageBgPicker'),
 };
 
 // ================================
@@ -370,15 +378,56 @@ function bindControlEvents() {
     const btn = e.target.closest('.layout-item');
     if (!btn) return;
     state.collageLayout = btn.dataset.layout;
-    initCollageSlots();
+    initCollageLayers();
     els.layoutGrid.querySelectorAll('.layout-item').forEach(b => 
       b.classList.toggle('active', b.dataset.layout === state.collageLayout)
     );
     scheduleRender();
   });
-  els.collageGap.oninput = (e) => {
-    state.collageGap = parseInt(e.target.value);
-    els.collageGapVal.textContent = e.target.value + '%';
+  // 图层控件
+  els.layerRadius.oninput = (e) => {
+    const layer = state.collageLayers[state.selectedLayerIdx];
+    if (!layer) return;
+    layer.cornerRadius = parseInt(e.target.value);
+    els.layerRadiusVal.textContent = e.target.value;
+    scheduleRender();
+  };
+  els.layerBorder.oninput = (e) => {
+    const layer = state.collageLayers[state.selectedLayerIdx];
+    if (!layer) return;
+    layer.borderWidth = parseInt(e.target.value);
+    els.layerBorderVal.textContent = e.target.value + '%';
+    scheduleRender();
+  };
+  document.querySelectorAll('[data-lcolor]').forEach(sw => {
+    sw.onclick = () => {
+      const layer = state.collageLayers[state.selectedLayerIdx];
+      if (!layer) return;
+      layer.borderColor = sw.dataset.lcolor;
+      document.querySelectorAll('[data-lcolor]').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      scheduleRender();
+    };
+  });
+  els.layerColorPicker.oninput = (e) => {
+    const layer = state.collageLayers[state.selectedLayerIdx];
+    if (!layer) return;
+    layer.borderColor = e.target.value;
+    scheduleRender();
+  };
+  els.layerUp.onclick = () => moveLayer(1);
+  els.layerDown.onclick = () => moveLayer(-1);
+  // 画布背景
+  document.querySelectorAll('[data-bgc]').forEach(sw => {
+    sw.onclick = () => {
+      state.collageBg = sw.dataset.bgc;
+      document.querySelectorAll('[data-bgc]').forEach(s => s.classList.remove('active'));
+      sw.classList.add('active');
+      scheduleRender();
+    };
+  });
+  els.collageBgPicker.oninput = (e) => {
+    state.collageBg = e.target.value;
     scheduleRender();
   };
 
@@ -1079,8 +1128,12 @@ function showToast(msg) {
 }
 
 // ================================
-// 拼图模式
+// 拼图模式（自由图层）
 // ================================
+
+const COLLAGE_W = 2400;
+const COLLAGE_H = 1800;
+const HANDLE_SZ = 20;
 
 function toggleCollageMode() {
   if (state.items.length < 2) {
@@ -1090,237 +1143,229 @@ function toggleCollageMode() {
   state.collageMode = !state.collageMode;
   els.btnCollage.classList.toggle('active', state.collageMode);
   els.collagePanel.hidden = !state.collageMode;
-  // 拼图模式下隐藏普通控制面板的比例/照片调整区
-  // 但保留边框、滤镜、导出等共享控件
-  if (state.collageMode) {
-    initCollageSlots();
-  }
+  if (state.collageMode) initCollageLayers();
   scheduleRender();
 }
 
-function initCollageSlots() {
+function initCollageLayers() {
   const layout = COLLAGE_LAYOUTS[state.collageLayout];
   if (!layout) return;
-  state.collageSlots = [];
+  const gap = 30;
+  state.collageLayers = [];
   for (let i = 0; i < layout.slots; i++) {
-    state.collageSlots.push({
+    const r = layout.regions[i];
+    state.collageLayers.push({
       itemIdx: i < state.items.length ? i : i % state.items.length,
-      offsetX: 0,
-      offsetY: 0,
-      scale: 1.0
+      x: Math.round(r.x * COLLAGE_W + gap),
+      y: Math.round(r.y * COLLAGE_H + gap),
+      w: Math.round(r.w * COLLAGE_W - gap * 2),
+      h: Math.round(r.h * COLLAGE_H - gap * 2),
+      cornerRadius: 0, borderWidth: 0, borderColor: '#ffffff', zIndex: i
     });
   }
+  state.selectedLayerIdx = 0;
+  syncLayerUI();
 }
 
-/**
- * 拼图渲染：多张照片绘制在同一 Canvas
- */
+function syncLayerUI() {
+  const layer = state.collageLayers[state.selectedLayerIdx];
+  if (!layer) { els.layerLabel.textContent = '未选择'; return; }
+  els.layerLabel.textContent = '#' + (state.selectedLayerIdx + 1);
+  els.layerRadius.value = layer.cornerRadius;
+  els.layerRadiusVal.textContent = layer.cornerRadius;
+  els.layerBorder.value = layer.borderWidth;
+  els.layerBorderVal.textContent = layer.borderWidth + '%';
+  els.layerColorPicker.value = layer.borderColor;
+}
+
+function moveLayer(dir) {
+  const layer = state.collageLayers[state.selectedLayerIdx];
+  if (!layer) return;
+  const sorted = [...state.collageLayers].sort((a, b) => a.zIndex - b.zIndex);
+  const pos = sorted.indexOf(layer);
+  const target = pos + dir;
+  if (target < 0 || target >= sorted.length) return;
+  const tmp = layer.zIndex;
+  layer.zIndex = sorted[target].zIndex;
+  sorted[target].zIndex = tmp;
+  scheduleRender();
+}
+
 function renderCollage() {
   if (!state.items.length) return;
-  const layout = COLLAGE_LAYOUTS[state.collageLayout];
-  if (!layout) return;
-  
-  // 使用第一张图的配置作为共享配置
-  const cfg = state.items[0].config;
   const ctx = els.ctx;
-  
-  // 计算画布尺寸（使用固定基准）
-  const baseSize = 2400;
-  let canvasW, canvasH;
-  if (cfg.aspectRatio === 'original') {
-    // 拼图模式下 original 默认为 4:3
-    canvasW = baseSize;
-    canvasH = Math.round(baseSize * 3 / 4);
-  } else {
-    const [rw, rh] = cfg.aspectRatio.split(':').map(Number);
-    canvasW = baseSize;
-    canvasH = Math.round(baseSize * rh / rw);
-  }
-  
-  els.canvas.width = canvasW;
-  els.canvas.height = canvasH;
-  
-  // 边框参数
-  const borderPct = cfg.frameType === 'none' ? 0 : cfg.frameWidth;
-  const border = Math.round(Math.min(canvasW, canvasH) * borderPct / 100);
-  const gapPx = Math.round(Math.min(canvasW, canvasH) * state.collageGap / 100);
-  
-  // 背景
-  if (cfg.frameType !== 'none') {
-    if (cfg.gradientOn) {
-      const grad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
-      grad.addColorStop(0, cfg.frameColor);
-      grad.addColorStop(1, cfg.gradientColor2);
-      ctx.fillStyle = grad;
-    } else {
-      ctx.fillStyle = cfg.frameColor;
-    }
-    ctx.fillRect(0, 0, canvasW, canvasH);
-  }
-  
-  // 绘制区域
-  const innerX = border;
-  const innerY = border;
-  const innerW = canvasW - border * 2;
-  const innerH = canvasH - border * 2;
-  
-  // 绘制每个槽位
-  layout.regions.forEach((region, slotIdx) => {
-    const slot = state.collageSlots[slotIdx];
-    if (!slot) return;
-    const item = state.items[slot.itemIdx];
+  els.canvas.width = COLLAGE_W;
+  els.canvas.height = COLLAGE_H;
+  ctx.fillStyle = state.collageBg;
+  ctx.fillRect(0, 0, COLLAGE_W, COLLAGE_H);
+
+  const sorted = [...state.collageLayers]
+    .map((l, i) => ({ ...l, _i: i }))
+    .sort((a, b) => a.zIndex - b.zIndex);
+
+  sorted.forEach(layer => {
+    const item = state.items[layer.itemIdx];
     if (!item) return;
-    
-    // 计算槽位在 Canvas 上的像素位置
-    const halfGap = gapPx / 2;
-    const rx = innerX + region.x * innerW + halfGap;
-    const ry = innerY + region.y * innerH + halfGap;
-    const rw = region.w * innerW - gapPx;
-    const rh = region.h * innerH - gapPx;
-    
-    if (rw <= 0 || rh <= 0) return;
-    
-    // 圆角
-    const pR = Math.min(rw, rh) / 2 * cfg.cornerRadius / 50;
-    
-    ctx.save();
-    roundRectPath(ctx, rx, ry, rw, rh, pR);
-    ctx.clip();
-    
-    // 滤镜
-    const filterStr = FILTERS[cfg.filter] || 'none';
-    if (filterStr !== 'none') ctx.filter = filterStr;
-    
-    // Cover 模式填充：照片填满槽位区域
-    const img = item.previewImg || item.img;
-    const imgAspect = img.width / img.height;
-    const slotAspect = rw / rh;
-    let drawW, drawH;
-    if (imgAspect > slotAspect) {
-      drawH = rh * slot.scale;
-      drawW = drawH * imgAspect;
-    } else {
-      drawW = rw * slot.scale;
-      drawH = drawW / imgAspect;
+    const { x, y, w, h, cornerRadius, borderWidth, borderColor } = layer;
+    const bw = Math.round(Math.min(w, h) * borderWidth / 100);
+    const oR = Math.min(w, h) / 2 * cornerRadius / 50;
+
+    if (bw > 0) {
+      ctx.save();
+      ctx.fillStyle = borderColor;
+      roundRectPath(ctx, x, y, w, h, oR);
+      ctx.fill();
+      ctx.restore();
     }
-    const drawX = rx + (rw - drawW) / 2 + slot.offsetX;
-    const drawY = ry + (rh - drawH) / 2 + slot.offsetY;
-    
-    ctx.drawImage(img, drawX, drawY, drawW, drawH);
-    ctx.filter = 'none';
+
+    const px = x + bw, py = y + bw, pw = w - bw * 2, ph = h - bw * 2;
+    if (pw <= 0 || ph <= 0) return;
+    const iR = Math.max(0, oR - bw);
+    ctx.save();
+    roundRectPath(ctx, px, py, pw, ph, iR);
+    ctx.clip();
+
+    const img = item.previewImg || item.img;
+    const ia = img.width / img.height, sa = pw / ph;
+    let dw, dh;
+    if (ia > sa) { dh = ph; dw = dh * ia; }
+    else { dw = pw; dh = dw / ia; }
+    ctx.drawImage(img, px + (pw - dw) / 2, py + (ph - dh) / 2, dw, dh);
     ctx.restore();
+
+    if (layer._i === state.selectedLayerIdx) {
+      ctx.save();
+      ctx.strokeStyle = '#7c6bff';
+      ctx.lineWidth = 4;
+      ctx.setLineDash([12, 6]);
+      roundRectPath(ctx, x - 2, y - 2, w + 4, h + 4, oR);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#7c6bff';
+      const hs = HANDLE_SZ;
+      [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(([hx, hy]) => {
+        ctx.beginPath();
+        ctx.arc(hx, hy, hs / 2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
   });
-  
-  // 水印
-  if (cfg.watermarkOn && cfg.watermarkText) {
-    drawWatermark(ctx, cfg, canvasW, canvasH, border, border, border, border);
-  }
-  
   fitDisplay();
 }
 
-/**
- * 拼图模式拖拽：判断点击落在哪个槽位
- */
 function startCollageDrag(e) {
-  const layout = COLLAGE_LAYOUTS[state.collageLayout];
-  if (!layout) return;
-  
   const rect = els.canvas.getBoundingClientRect();
-  const scaleX = els.canvas.width / rect.width;
-  const scaleY = els.canvas.height / rect.height;
-  const cx = (e.clientX - rect.left) * scaleX;
-  const cy = (e.clientY - rect.top) * scaleY;
-  
-  const cfg = state.items[0].config;
-  const borderPct = cfg.frameType === 'none' ? 0 : cfg.frameWidth;
-  const border = Math.round(Math.min(els.canvas.width, els.canvas.height) * borderPct / 100);
-  const innerX = border, innerY = border;
-  const innerW = els.canvas.width - border * 2;
-  const innerH = els.canvas.height - border * 2;
-  
-  // 找到点击所在的槽位
-  let hitSlot = -1;
-  layout.regions.forEach((region, idx) => {
-    const rx = innerX + region.x * innerW;
-    const ry = innerY + region.y * innerH;
-    const rw = region.w * innerW;
-    const rh = region.h * innerH;
-    if (cx >= rx && cx <= rx + rw && cy >= ry && cy <= ry + rh) {
-      hitSlot = idx;
+  const sx = els.canvas.width / rect.width;
+  const sy = els.canvas.height / rect.height;
+  const cx = (e.clientX - rect.left) * sx;
+  const cy = (e.clientY - rect.top) * sy;
+
+  const sel = state.collageLayers[state.selectedLayerIdx];
+  if (sel) {
+    const hs = HANDLE_SZ;
+    const corners = [
+      { n: 'nw', hx: sel.x, hy: sel.y },
+      { n: 'ne', hx: sel.x + sel.w, hy: sel.y },
+      { n: 'sw', hx: sel.x, hy: sel.y + sel.h },
+      { n: 'se', hx: sel.x + sel.w, hy: sel.y + sel.h },
+    ];
+    for (const c of corners) {
+      if (Math.hypot(cx - c.hx, cy - c.hy) < hs) {
+        state.layerDragMode = 'resize-' + c.n;
+        state.isDragging = true;
+        state.drag = { x: e.clientX, y: e.clientY, ox: sel.x, oy: sel.y, ow: sel.w, oh: sel.h };
+        els.canvas.style.cursor = 'nwse-resize';
+        return;
+      }
     }
-  });
-  
-  if (hitSlot >= 0 && state.collageSlots[hitSlot]) {
-    state.collageDragSlot = hitSlot;
-    state.isDragging = true;
-    state.drag.x = e.clientX;
-    state.drag.y = e.clientY;
-    state.drag.ox = state.collageSlots[hitSlot].offsetX;
-    state.drag.oy = state.collageSlots[hitSlot].offsetY;
-    els.canvas.style.cursor = 'grabbing';
   }
+
+  const sorted = [...state.collageLayers].map((l, i) => ({ ...l, idx: i })).sort((a, b) => b.zIndex - a.zIndex);
+  for (const layer of sorted) {
+    if (cx >= layer.x && cx <= layer.x + layer.w && cy >= layer.y && cy <= layer.y + layer.h) {
+      state.selectedLayerIdx = layer.idx;
+      state.layerDragMode = 'move';
+      state.isDragging = true;
+      const s = state.collageLayers[layer.idx];
+      state.drag = { x: e.clientX, y: e.clientY, ox: s.x, oy: s.y };
+      els.canvas.style.cursor = 'grabbing';
+      syncLayerUI();
+      scheduleRender();
+      return;
+    }
+  }
+  state.selectedLayerIdx = -1;
+  syncLayerUI();
+  scheduleRender();
 }
 
 function doCollageDrag(e) {
-  if (!state.isDragging || state.collageDragSlot < 0) return;
-  const slot = state.collageSlots[state.collageDragSlot];
-  if (!slot) return;
+  if (!state.isDragging || !state.layerDragMode) return;
+  const layer = state.collageLayers[state.selectedLayerIdx];
+  if (!layer) return;
   const rect = els.canvas.getBoundingClientRect();
-  const scale = els.canvas.width / rect.width;
-  slot.offsetX = state.drag.ox + (e.clientX - state.drag.x) * scale;
-  slot.offsetY = state.drag.oy + (e.clientY - state.drag.y) * scale;
+  const sx = els.canvas.width / rect.width;
+  const sy = els.canvas.height / rect.height;
+  const dx = (e.clientX - state.drag.x) * sx;
+  const dy = (e.clientY - state.drag.y) * sy;
+  const MIN = 100;
+
+  if (state.layerDragMode === 'move') {
+    layer.x = state.drag.ox + dx;
+    layer.y = state.drag.oy + dy;
+  } else {
+    const c = state.layerDragMode.split('-')[1];
+    if (c === 'se') { layer.w = Math.max(MIN, state.drag.ow + dx); layer.h = Math.max(MIN, state.drag.oh + dy); }
+    else if (c === 'sw') { const nw = Math.max(MIN, state.drag.ow - dx); layer.x = state.drag.ox + state.drag.ow - nw; layer.w = nw; layer.h = Math.max(MIN, state.drag.oh + dy); }
+    else if (c === 'ne') { layer.w = Math.max(MIN, state.drag.ow + dx); const nh = Math.max(MIN, state.drag.oh - dy); layer.y = state.drag.oy + state.drag.oh - nh; layer.h = nh; }
+    else if (c === 'nw') { const nw = Math.max(MIN, state.drag.ow - dx); const nh = Math.max(MIN, state.drag.oh - dy); layer.x = state.drag.ox + state.drag.ow - nw; layer.y = state.drag.oy + state.drag.oh - nh; layer.w = nw; layer.h = nh; }
+  }
   scheduleRender();
 }
 
 function stopCollageDrag() {
-  if (state.isDragging && state.collageDragSlot >= 0) {
+  if (state.isDragging) {
     state.isDragging = false;
-    state.collageDragSlot = -1;
-    els.canvas.style.cursor = 'grab';
+    state.layerDragMode = null;
+    els.canvas.style.cursor = 'default';
   }
 }
 
-/**
- * 拼图导出
- */
 function downloadCollage() {
   const offscreen = document.createElement('canvas');
   const offCtx = offscreen.getContext('2d');
-  
-  const origCtx = els.ctx;
-  const origCanvas = els.canvas;
-  els.ctx = offCtx;
-  els.canvas = offscreen;
-  
-  // 导出时用原图
-  const savedPreviews = state.collageSlots.map(slot => {
-    const item = state.items[slot.itemIdx];
-    const saved = item?.previewImg;
+  const origCtx = els.ctx, origCanvas = els.canvas;
+  els.ctx = offCtx; els.canvas = offscreen;
+
+  const savedPreviews = state.collageLayers.map(l => {
+    const item = state.items[l.itemIdx];
+    const s = item?.previewImg;
     if (item) item.previewImg = item.img;
-    return saved;
+    return s;
   });
-  
+  const savedSel = state.selectedLayerIdx;
+  state.selectedLayerIdx = -1;
   renderCollage();
-  
+  state.selectedLayerIdx = savedSel;
+
   const mime = state.exportFormat === 'jpeg' ? 'image/jpeg' : 'image/png';
   const quality = state.exportFormat === 'jpeg' ? state.exportQuality : 1.0;
   const ext = state.exportFormat === 'jpeg' ? '.jpg' : '.png';
-  
   const link = document.createElement('a');
   link.download = 'framer_collage' + ext;
   link.href = offscreen.toDataURL(mime, quality);
   link.click();
-  
-  // 还原
-  state.collageSlots.forEach((slot, i) => {
-    const item = state.items[slot.itemIdx];
+
+  state.collageLayers.forEach((l, i) => {
+    const item = state.items[l.itemIdx];
     if (item) item.previewImg = savedPreviews[i];
   });
-  els.ctx = origCtx;
-  els.canvas = origCanvas;
+  els.ctx = origCtx; els.canvas = origCanvas;
   scheduleRender();
 }
+
+// 启动
 
 // 启动
 window.onload = () => {

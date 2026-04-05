@@ -432,3 +432,9 @@ body {
   border-color: var(--accent); background: var(--accent-dim);
   color: var(--accent);
 }
+
+#layerLabel { color: var(--accent); font-weight: 600; }
+.layer-actions {
+  display: flex; gap: 8px; margin-top: 10px;
+}
+.layer-actions .btn-undo { flex: 1; justify-content: center; }
