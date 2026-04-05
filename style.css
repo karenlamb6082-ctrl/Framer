@@ -208,7 +208,7 @@ body {
 }
 .ratio-apply-btn:hover { background: var(--accent-hover); }
 
-.frame-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.frame-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
 .frame-item {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   background: transparent; border: 2px solid transparent;
@@ -229,6 +229,9 @@ body {
 .frame-thumb--black .frame-thumb-inner { background: linear-gradient(135deg,#bbb,#888); border-radius: 1px; }
 .frame-thumb--museum { background: #fff; padding: 0px; border: 4px solid #fff; box-shadow: inset 0 0 4px rgba(0,0,0,0.2), 0 2px 4px rgba(0,0,0,0.1); }
 .frame-thumb--museum .frame-thumb-inner { background: linear-gradient(135deg,#bbb,#888); }
+.frame-thumb--gallery { background: #111; padding: 2px; border: 1px solid #333; }
+.frame-thumb--gallery .frame-thumb-inner { background: #f5f2ed; display: flex; align-items: center; justify-content: center; }
+.frame-thumb--gallery .frame-thumb-inner::after { content: ''; display: block; width: 70%; height: 70%; background: linear-gradient(135deg,#bbb,#888); }
 
 .frame-thumb--none { background: var(--surface-3); border: 1px dashed var(--border-light); }
 .frame-thumb--none .frame-thumb-inner { background: linear-gradient(135deg,#bbb,#888); margin: 4px; }

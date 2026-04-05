@@ -188,6 +188,10 @@
               <div class="frame-thumb frame-thumb--museum"><div class="frame-thumb-inner"></div></div>
               <span>美术馆留白</span>
             </button>
+            <button class="frame-item" data-frame="gallery">
+              <div class="frame-thumb frame-thumb--gallery"><div class="frame-thumb-inner"></div></div>
+              <span>画廊装裱</span>
+            </button>
             <button class="frame-item" data-frame="none">
               <div class="frame-thumb frame-thumb--none"><div class="frame-thumb-inner"></div></div>
               <span>仅照片</span>
@@ -268,34 +272,19 @@
               <span class="slider-label">强</span>
             </div>
           </div>
+
+          <div class="sub-label" style="margin-top: 16px;">胶片颗粒 (Film Grain)</div>
+          <div class="shadow-row">
+            <button class="toggle-btn" id="grainToggle">关 闭</button>
+            <div class="slider-row flex-1 shadow-slider-disabled" id="grainSliderWrap">
+              <span class="slider-label">细腻</span>
+              <input type="range" class="slider" id="grainIntensity" min="1" max="15" value="5" title="颗粒强度">
+              <span class="slider-label">粗犷</span>
+            </div>
+          </div>
         </section>
 
-        <!-- 5. 水印/文字 -->
-        <section class="panel-section">
-          <h3 class="panel-title">水印文字</h3>
-          <div class="watermark-row">
-            <button class="toggle-btn" id="watermarkToggle">关 闭</button>
-            <input type="text" class="watermark-input" id="watermarkText" placeholder="输入水印文字..." disabled>
-          </div>
-          <div class="watermark-options" id="watermarkOptions" hidden>
-            <div class="sub-label">位置</div>
-            <div class="watermark-pos-grid">
-              <button class="export-fmt active" data-pos="bottomRight" id="posBottomRight">右下</button>
-              <button class="export-fmt" data-pos="bottomLeft" id="posBottomLeft">左下</button>
-              <button class="export-fmt" data-pos="center" id="posCenter">居中</button>
-            </div>
-            <div class="slider-row" style="margin-top:8px">
-              <span class="slider-label">小</span>
-              <input type="range" class="slider" id="watermarkSize" min="10" max="60" value="24" title="字体大小">
-              <span class="slider-val" id="watermarkSizeVal">24px</span>
-              <span class="slider-label">大</span>
-            </div>
-            <div class="export-row" style="margin-top:8px">
-              <button class="export-fmt active" data-wcolor="white" id="wcolorWhite">白色</button>
-              <button class="export-fmt" data-wcolor="black" id="wcolorBlack">黑色</button>
-            </div>
-          </div>
-        </section>
+
 
         <!-- 导出选项 -->
         <section class="panel-section">

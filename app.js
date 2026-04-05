@@ -64,7 +64,7 @@ const COLLAGE_LAYOUTS = {
 
 // 极简高定风格预设初始颜色
 const BORDER_DEFAULTS = {
-  white: '#ffffff', black: '#000000', museum: '#fafafa', none: '#ffffff'
+  white: '#ffffff', black: '#000000', museum: '#fafafa', gallery: '#1a1a1a', none: '#ffffff'
 };
 
 // 默认配置生成器
@@ -84,11 +84,8 @@ const createDefaultConfig = (frame = 'white') => ({
   photoStrokeOn: true,
   photoStrokeWidth: 8,
   photoStrokeColor: 'rgba(0,0,0,0.5)',
-  watermarkOn:  false,
-  watermarkText: '',
-  watermarkPos: 'center',
-  watermarkSize: 20,
-  watermarkColor: 'white',
+  grainOn:      false,
+  grainIntensity: 5,
 });
 
 // ================================
@@ -135,11 +132,9 @@ const els = {
   gradientToggle: document.getElementById('gradientToggle'),
   gradientColor2Wrap: document.getElementById('gradientColor2Wrap'),
   gradientColor2: document.getElementById('gradientColor2'),
-  watermarkToggle: document.getElementById('watermarkToggle'),
-  watermarkText:  document.getElementById('watermarkText'),
-  watermarkOptions: document.getElementById('watermarkOptions'),
-  watermarkSize:  document.getElementById('watermarkSize'),
-  watermarkSizeVal: document.getElementById('watermarkSizeVal'),
+  grainToggle:    document.getElementById('grainToggle'),
+  grainIntensity: document.getElementById('grainIntensity'),
+  grainSliderWrap: document.getElementById('grainSliderWrap'),
   // 拼图
   btnCollage:     document.getElementById('btnCollage'),
   collagePanel:   document.getElementById('collagePanel'),
@@ -340,41 +335,17 @@ function bindControlEvents() {
     scheduleRender();
   };
 
-  // 水印
-  els.watermarkToggle.onclick = () => {
+  // 胶片颗粒
+  els.grainToggle.onclick = () => {
     const item = getActiveItem();
     if (!item) return;
-    const next = !item.config.watermarkOn;
-    updateActiveConfig({ watermarkOn: next });
+    updateActiveConfig({ grainOn: !item.config.grainOn });
     syncUI(); scheduleRender();
   };
-  els.watermarkText.oninput = (e) => {
-    updateActiveConfig({ watermarkText: e.target.value });
+  els.grainIntensity.oninput = (e) => {
+    updateActiveConfig({ grainIntensity: parseInt(e.target.value) });
     scheduleRender();
   };
-  els.watermarkSize.oninput = (e) => {
-    updateActiveConfig({ watermarkSize: parseInt(e.target.value) });
-    els.watermarkSizeVal.textContent = e.target.value + 'px';
-    scheduleRender();
-  };
-  // 水印位置按钮
-  document.querySelectorAll('[data-pos]').forEach(btn => {
-    btn.onclick = () => {
-      updateActiveConfig({ watermarkPos: btn.dataset.pos });
-      document.querySelectorAll('[data-pos]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      scheduleRender();
-    };
-  });
-  // 水印颜色
-  document.querySelectorAll('[data-wcolor]').forEach(btn => {
-    btn.onclick = () => {
-      updateActiveConfig({ watermarkColor: btn.dataset.wcolor });
-      document.querySelectorAll('[data-wcolor]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      scheduleRender();
-    };
-  });
 
   // 批量操作
   els.btnUndo.onclick = undo;
@@ -676,16 +647,11 @@ function syncUI() {
   els.gradientToggle.textContent = cfg.gradientOn ? '渐变 开' : '渐变';
   els.gradientColor2Wrap.hidden = !cfg.gradientOn;
   els.gradientColor2.value = cfg.gradientColor2;
-  // 水印
-  els.watermarkToggle.textContent = cfg.watermarkOn ? '开 启' : '关 闭';
-  els.watermarkToggle.classList.toggle('on', cfg.watermarkOn);
-  els.watermarkText.disabled = !cfg.watermarkOn;
-  els.watermarkText.value = cfg.watermarkText;
-  els.watermarkOptions.hidden = !cfg.watermarkOn;
-  els.watermarkSize.value = cfg.watermarkSize;
-  els.watermarkSizeVal.textContent = cfg.watermarkSize + 'px';
-  document.querySelectorAll('[data-pos]').forEach(b => b.classList.toggle('active', b.dataset.pos === cfg.watermarkPos));
-  document.querySelectorAll('[data-wcolor]').forEach(b => b.classList.toggle('active', b.dataset.wcolor === cfg.watermarkColor));
+  // 胶片颗粒
+  els.grainToggle.textContent = cfg.grainOn ? '开 启' : '关 闭';
+  els.grainToggle.classList.toggle('on', cfg.grainOn);
+  els.grainSliderWrap.classList.toggle('shadow-slider-disabled', !cfg.grainOn);
+  els.grainIntensity.value = cfg.grainIntensity;
 }
 
 function renderThumbnails() {
@@ -807,12 +773,29 @@ function render() {
   
   if (cfg.frameType === 'film') {
     ctx.fillStyle = '#111'; ctx.fillRect(0, 0, canvasW, canvasH);
+  } else if (cfg.frameType === 'gallery') {
+    // 画廊装裱：黑色外框 + 白色内衬纸
+    ctx.fillStyle = '#111';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    // 内衬纸（outer frame 占边框总宽的 30%）
+    const outerFrame = Math.round(Math.min(bT, bR, bB, bL) * 0.3);
+    const matColor = cfg.frameColor === '#1a1a1a' ? '#f5f2ed' : cfg.frameColor;
+    ctx.fillStyle = matColor;
+    ctx.fillRect(outerFrame, outerFrame, canvasW - outerFrame * 2, canvasH - outerFrame * 2);
+    // 叠加纸张纹理
+    applyGrain(ctx, outerFrame, outerFrame, canvasW - outerFrame * 2, canvasH - outerFrame * 2, 0.025);
+    // 外框纫理
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.015);
   } else if (cfg.frameType === 'museum') {
     ctx.fillStyle = getBorderFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
+    // Museum 卡纸纹理
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.02);
   } else if (cfg.frameType !== 'none') {
     ctx.fillStyle = getBorderFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
+    // 边框微妙纹理
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.012);
   }
 
   // 2. 准备照片参数
@@ -876,24 +859,36 @@ function render() {
   }
   ctx.restore();
 
-  // 5. 装饰层：Museum 艺术装裱增强（增加卡纸凹陷感）
-  if (cfg.frameType === 'museum' && bT > 0) {
+  // 5. 装饰层：Museum / Gallery 艺术装裱增强
+  if ((cfg.frameType === 'museum' || cfg.frameType === 'gallery') && bT > 0) {
     ctx.save();
-    // 模拟相框内边缘的斜面投影 (Bevel Shadow)
-    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(photoX, photoY, photoW, photoH);
+    // 卡纸切割边缘 — 外层暗边
+    const bevelSize = Math.max(2, Math.round(Math.min(bT, bL) * 0.02));
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    ctx.lineWidth = bevelSize;
+    roundRectPath(ctx, drawX - bevelSize/2, drawY - bevelSize/2, drawnW + bevelSize, drawnH + bevelSize, pR);
+    ctx.stroke();
     
-    // 增加一个极细的亮内边，体现立体感
-    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-    ctx.strokeRect(photoX + 1, photoY + 1, photoW - 2, photoH - 2);
+    // 内层亮边 — 模拟卡纸切割的反光
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = Math.max(1, bevelSize * 0.5);
+    roundRectPath(ctx, drawX + bevelSize * 0.3, drawY + bevelSize * 0.3, drawnW - bevelSize * 0.6, drawnH - bevelSize * 0.6, pR);
+    ctx.stroke();
 
-    // 内部微弱渐变，体现凹陷
-    const innerGrad = ctx.createLinearGradient(photoX, photoY, photoX + 20, photoY + 20);
-    innerGrad.addColorStop(0, 'rgba(0,0,0,0.08)');
-    innerGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = innerGrad;
-    ctx.fillRect(photoX, photoY, photoW, photoH);
+    // 内部微弱渐变，体现凹陷感
+    const shadowDepth = Math.max(8, Math.round(Math.min(bT, bL) * 0.08));
+    // 上边暗角
+    const topGrad = ctx.createLinearGradient(drawX, drawY, drawX, drawY + shadowDepth);
+    topGrad.addColorStop(0, 'rgba(0,0,0,0.12)');
+    topGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = topGrad;
+    ctx.fillRect(drawX, drawY, drawnW, shadowDepth);
+    // 左边暗角
+    const leftGrad = ctx.createLinearGradient(drawX, drawY, drawX + shadowDepth, drawY);
+    leftGrad.addColorStop(0, 'rgba(0,0,0,0.08)');
+    leftGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = leftGrad;
+    ctx.fillRect(drawX, drawY, shadowDepth, drawnH);
     ctx.restore();
   }
 
@@ -912,9 +907,10 @@ function render() {
     drawGrid(ctx, photoX, photoY, photoW, photoH);
   }
 
-  // 9. 水印文字
-  if (cfg.watermarkOn && cfg.watermarkText) {
-    drawWatermark(ctx, cfg, canvasW, canvasH, bT, bB, bL, bR, drawY, drawnH);
+  // 9. 胶片颗粒效果
+  if (cfg.grainOn && cfg.grainIntensity > 0) {
+    const grainAlpha = cfg.grainIntensity * 0.006;
+    applyGrain(ctx, drawX, drawY, drawnW, drawnH, grainAlpha);
   }
 
   fitDisplay();
@@ -932,6 +928,7 @@ function computeDims(item) {
   if (cfg.frameType === 'polaroid') { bB = Math.round(base * 3.2); }
   else if (cfg.frameType === 'film') { bT = Math.round(base * 1.6); bB = Math.round(base * 1.6); }
   else if (cfg.frameType === 'museum') { bT = bR = bB = bL = Math.round(base * 1.5); }
+  else if (cfg.frameType === 'gallery') { bT = bR = bB = bL = Math.round(base * 2.0); }
   else if (cfg.frameType === 'none') { bT = bR = bB = bL = 0; }
 
   const photoW = img.width;
@@ -953,6 +950,7 @@ function computeDims(item) {
   if (cfg.frameType === 'polaroid') { dbB = Math.round(dynamicBase * 3.2); }
   else if (cfg.frameType === 'film') { dbT = Math.round(dynamicBase * 1.6); dbB = Math.round(dynamicBase * 1.6); }
   else if (cfg.frameType === 'museum') { dbT = dbR = dbB = dbL = Math.round(dynamicBase * 1.5); }
+  else if (cfg.frameType === 'gallery') { dbT = dbR = dbB = dbL = Math.round(dynamicBase * 2.0); }
   else if (cfg.frameType === 'none') { dbT = dbR = dbB = dbL = 0; }
 
   const innerW = Math.max(1, canvasW - dbL - dbR);  // 防止边框过大挤占至 0 或负数
@@ -1034,43 +1032,42 @@ function drawGrid(ctx, x, y, w, h) {
   ctx.restore();
 }
 
-function drawWatermark(ctx, cfg, canvasW, canvasH, bT, bB, bL, bR, drawY, drawnH) {
-  const fontSize = Math.round(canvasW * cfg.watermarkSize / 1000);
-  ctx.save();
-  ctx.font = `${fontSize}px 'Inter', sans-serif`;
-  ctx.fillStyle = cfg.watermarkColor === 'white' 
-    ? 'rgba(255,255,255,0.7)' 
-    : 'rgba(0,0,0,0.5)';
-  ctx.textBaseline = 'middle';
-  
-  const text = cfg.watermarkText;
-  const pad = fontSize * 0.8;
-  let x, y;
-  
-  // 底部留白区域的视觉中心位置
-  const bottomSpaceCenter = drawY + drawnH + (canvasH - (drawY + drawnH)) / 2;
-  
-  switch (cfg.watermarkPos) {
-    case 'bottomLeft':
-      ctx.textAlign = 'left';
-      x = bL + pad;
-      y = bottomSpaceCenter;
-      if ((canvasH - (drawY + drawnH)) < fontSize * 2) y = canvasH - pad;
-      break;
-    case 'center':
-      ctx.textAlign = 'center';
-      x = canvasW / 2;
-      y = bottomSpaceCenter;
-      if ((canvasH - (drawY + drawnH)) < fontSize * 2) y = canvasH - pad;
-      break;
-    default: // bottomRight
-      ctx.textAlign = 'right';
-      x = canvasW - bR - pad;
-      y = bottomSpaceCenter;
-      if ((canvasH - (drawY + drawnH)) < fontSize * 2) y = canvasH - pad;
+// ================================
+// 噪点纹理系统（边框材质 + 胶片颗粒）
+// ================================
+let _noiseCanvas = null;
+function getNoiseCanvas() {
+  if (_noiseCanvas) return _noiseCanvas;
+  const size = 256;
+  _noiseCanvas = document.createElement('canvas');
+  _noiseCanvas.width = size;
+  _noiseCanvas.height = size;
+  const nctx = _noiseCanvas.getContext('2d');
+  const imageData = nctx.createImageData(size, size);
+  const d = imageData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const v = Math.random() * 255;
+    d[i] = v; d[i+1] = v; d[i+2] = v; d[i+3] = 255;
   }
-  
-  ctx.fillText(text, x, y);
+  nctx.putImageData(imageData, 0, 0);
+  return _noiseCanvas;
+}
+
+/**
+ * 在指定区域叠加噪点纹理
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {number} x, y, w, h - 覆盖区域
+ * @param {number} opacity - 纹理强度（0~1）
+ */
+function applyGrain(ctx, x, y, w, h, opacity) {
+  if (!opacity || opacity <= 0 || w <= 0 || h <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.globalCompositeOperation = 'overlay';
+  const noise = getNoiseCanvas();
+  const pattern = ctx.createPattern(noise, 'repeat');
+  ctx.fillStyle = pattern;
+  ctx.fillRect(x, y, w, h);
   ctx.restore();
 }
 
@@ -1105,11 +1102,8 @@ function syncAllConfigs() {
     item.config.photoStrokeOn = src.photoStrokeOn;
     item.config.photoStrokeWidth = src.photoStrokeWidth;
     item.config.photoStrokeColor = src.photoStrokeColor;
-    item.config.watermarkOn  = src.watermarkOn;
-    item.config.watermarkText = src.watermarkText;
-    item.config.watermarkPos = src.watermarkPos;
-    item.config.watermarkSize = src.watermarkSize;
-    item.config.watermarkColor = src.watermarkColor;
+    item.config.grainOn      = src.grainOn;
+    item.config.grainIntensity = src.grainIntensity;
   });
   // 非阻断式提示（2秒后自动消失）
   showToast('已同步到所有图片（保留各自缩放和偏移）');
