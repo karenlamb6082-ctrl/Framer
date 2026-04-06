@@ -21,31 +21,53 @@ const MAX_HISTORY = 40;
 
 
 
-// 极简高定风格预设初始颜色
+// 8种高质感边框预设及其默认配色
 const BORDER_DEFAULTS = {
-  white: '#ffffff', black: '#000000', museum: '#fafafa', gallery: '#1a1a1a', none: '#ffffff'
+  'gallery-black':     '#0a0a0a',
+  'museum-white':      '#faf8f5',
+  'editorial':         '#ffffff',
+  'floating':          '#131313',
+  'soft-ivory':        '#f5f0e6',
+  'darkroom':          '#1a1a1a',
+  'thin-archive':      '#ffffff',
+  'shadow-mat':        '#fafafa',
+};
+
+// 每种预设的独立默认参数
+const PRESET_DEFAULTS = {
+  'gallery-black':   { frameWidth: 14, shadowOn: false, photoStrokeOn: false, grainOn: false },
+  'museum-white':    { frameWidth: 12, shadowOn: false, photoStrokeOn: false, grainOn: false },
+  'editorial':       { frameWidth: 4,  shadowOn: false, photoStrokeOn: false, grainOn: false },
+  'floating':        { frameWidth: 10, shadowOn: false, photoStrokeOn: false, grainOn: false },
+  'soft-ivory':      { frameWidth: 10, shadowOn: false, photoStrokeOn: false, grainOn: false },
+  'darkroom':        { frameWidth: 12, shadowOn: false, photoStrokeOn: false, grainOn: false },
+  'thin-archive':    { frameWidth: 3,  shadowOn: false, photoStrokeOn: false, grainOn: false },
+  'shadow-mat':      { frameWidth: 14, shadowOn: false, photoStrokeOn: false, grainOn: false },
 };
 
 // 默认配置生成器
-const createDefaultConfig = (frame = 'white') => ({
-  frameType:    frame,
-  frameWidth:   10,
-  frameColor:   BORDER_DEFAULTS[frame],
-  gradientOn:   false,
-  gradientColor2: '#f5f0e8',
-  aspectRatio:  'original',
-  cornerRadius: 0,
-  photoScale:   1.0,
-  photoOffsetX: 0,
-  photoOffsetY: 0,
-  shadowOn:     false,
-  shadowIntensity: 6,
-  photoStrokeOn: true,
-  photoStrokeWidth: 8,
-  photoStrokeColor: 'rgba(0,0,0,0.5)',
-  grainOn:      false,
-  grainIntensity: 5,
-});
+const createDefaultConfig = (frame = 'gallery-black') => {
+  const pd = PRESET_DEFAULTS[frame] || PRESET_DEFAULTS['gallery-black'];
+  return {
+    frameType:    frame,
+    frameWidth:   pd.frameWidth,
+    frameColor:   BORDER_DEFAULTS[frame] || '#ffffff',
+    gradientOn:   false,
+    gradientColor2: '#f5f0e8',
+    aspectRatio:  'original',
+    cornerRadius: 0,
+    photoScale:   1.0,
+    photoOffsetX: 0,
+    photoOffsetY: 0,
+    shadowOn:     pd.shadowOn,
+    shadowIntensity: 6,
+    photoStrokeOn: pd.photoStrokeOn,
+    photoStrokeWidth: 8,
+    photoStrokeColor: 'rgba(0,0,0,0.5)',
+    grainOn:      pd.grainOn,
+    grainIntensity: 5,
+  };
+};
 
 // ================================
 // DOM 引用
@@ -206,7 +228,12 @@ function bindControlEvents() {
     const btn = e.target.closest('.frame-item');
     if (!btn) return;
     const type = btn.dataset.frame;
-    updateActiveConfig({ frameType: type, frameColor: BORDER_DEFAULTS[type] });
+    const pd = PRESET_DEFAULTS[type] || {};
+    updateActiveConfig({
+      frameType: type,
+      frameColor: BORDER_DEFAULTS[type],
+      frameWidth: pd.frameWidth || 10,
+    });
     syncUI(); scheduleRender();
   });
 
@@ -663,9 +690,17 @@ function render() {
   els.canvas.height = canvasH;
   ctx.clearRect(0, 0, canvasW, canvasH);
 
-  // 1. 绘制背景层
+  // ---- 准备照片参数 ----
+  const drawnW = photoW * cfg.photoScale;
+  const drawnH = photoH * cfg.photoScale;
+  const drawX = photoX + (photoW - drawnW) / 2 + cfg.photoOffsetX;
+  const drawY = photoY + (photoH - drawnH) / 2 + cfg.photoOffsetY;
+  const pR = Math.min(drawnW, drawnH) / 2 * cfg.cornerRadius / 50;
+  const minBorder = Math.min(bT, bR, bB, bL);
+
+  // ---- 渐变填充辅助 ----
   const getBorderFill = () => {
-    if (cfg.gradientOn && cfg.frameType !== 'film' && cfg.frameType !== 'none') {
+    if (cfg.gradientOn) {
       const grad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
       grad.addColorStop(0, cfg.frameColor);
       grad.addColorStop(1, cfg.gradientColor2);
@@ -673,82 +708,183 @@ function render() {
     }
     return cfg.frameColor;
   };
-  
-  if (cfg.frameType === 'film') {
-    ctx.fillStyle = '#111'; ctx.fillRect(0, 0, canvasW, canvasH);
-  } else if (cfg.frameType === 'gallery') {
-    // 画廊装裱：黑色外框 + 白色内衬纸
+
+  // =========================================
+  // 1. 背景层 — 按预设类型分别渲染
+  // =========================================
+  const ft = cfg.frameType;
+
+  if (ft === 'gallery-black') {
+    // Gallery Black: 黑色展览墙 + 冷白装裱面
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    // 冷白卡纸内衬
+    const outerFrame = Math.round(minBorder * 0.25);
+    ctx.fillStyle = '#f0f0ee';
+    ctx.fillRect(outerFrame, outerFrame, canvasW - outerFrame * 2, canvasH - outerFrame * 2);
+    // 极微弱纸张纹理
+    applyGrain(ctx, outerFrame, outerFrame, canvasW - outerFrame * 2, canvasH - outerFrame * 2, 0.015);
+
+  } else if (ft === 'museum-white') {
+    // Museum White: 暖白美术馆墙面 + 米白卡纸
+    ctx.fillStyle = getBorderFill();
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    // 柔和纸张纹理
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.025);
+
+  } else if (ft === 'editorial') {
+    // Editorial Minimal: 极薄边框，几乎无纹理
+    ctx.fillStyle = getBorderFill();
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    // 极微弱纹理
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.005);
+
+  } else if (ft === 'floating') {
+    // Floating Print: 深色背景，照片悬浮
+    ctx.fillStyle = getBorderFill();
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.02);
+
+  } else if (ft === 'soft-ivory') {
+    // Soft Ivory: 象牙白暖调，纸感明显
+    ctx.fillStyle = getBorderFill();
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    // 暖色纸张纹理（更重）
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.035);
+    // 叠加一层微弱暖色渐变
+    ctx.save();
+    ctx.globalAlpha = 0.03;
+    const warmGrad = ctx.createRadialGradient(canvasW/2, canvasH/2, 0, canvasW/2, canvasH/2, Math.max(canvasW, canvasH) * 0.7);
+    warmGrad.addColorStop(0, '#f5e6d0');
+    warmGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = warmGrad;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    ctx.restore();
+
+  } else if (ft === 'darkroom') {
+    // Darkroom Mat: 深灰黑底 + 灰白框面
     ctx.fillStyle = '#111';
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 内衬纸（outer frame 占边框总宽的 30%）
-    const outerFrame = Math.round(Math.min(bT, bR, bB, bL) * 0.3);
-    const matColor = cfg.frameColor === '#1a1a1a' ? '#f5f2ed' : cfg.frameColor;
-    ctx.fillStyle = matColor;
+    // 灰白卡纸内衬
+    const outerFrame = Math.round(minBorder * 0.3);
+    ctx.fillStyle = '#d8d5d0';
     ctx.fillRect(outerFrame, outerFrame, canvasW - outerFrame * 2, canvasH - outerFrame * 2);
-    // 叠加纸张纹理
-    applyGrain(ctx, outerFrame, outerFrame, canvasW - outerFrame * 2, canvasH - outerFrame * 2, 0.025);
-    // 外框纫理
+    applyGrain(ctx, outerFrame, outerFrame, canvasW - outerFrame * 2, canvasH - outerFrame * 2, 0.03);
     applyGrain(ctx, 0, 0, canvasW, canvasH, 0.015);
-  } else if (cfg.frameType === 'museum') {
+
+  } else if (ft === 'thin-archive') {
+    // Thin Archive: 极克制，几乎无框
     ctx.fillStyle = getBorderFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // Museum 卡纸纹理
+    // 极微弱定义线
+    if (minBorder > 0) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(drawX - 0.5, drawY - 0.5, drawnW + 1, drawnH + 1);
+      ctx.restore();
+    }
+
+  } else if (ft === 'shadow-mat') {
+    // Shadow Mat: 白色卡纸 + 强调内凹阴影
+    ctx.fillStyle = getBorderFill();
+    ctx.fillRect(0, 0, canvasW, canvasH);
     applyGrain(ctx, 0, 0, canvasW, canvasH, 0.02);
-  } else if (cfg.frameType !== 'none') {
-    ctx.fillStyle = getBorderFill();
-    ctx.fillRect(0, 0, canvasW, canvasH);
-    // 边框微妙纹理
-    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.012);
+
   }
 
-  // 2. 准备照片参数
-  const drawnW = photoW * cfg.photoScale;
-  const drawnH = photoH * cfg.photoScale;
-  const drawX = photoX + (photoW - drawnW) / 2 + cfg.photoOffsetX;
-  const drawY = photoY + (photoH - drawnH) / 2 + cfg.photoOffsetY;
-  const pR = Math.min(drawnW, drawnH) / 2 * cfg.cornerRadius / 50;
-
-  // 3. 特殊效果：Float (悬浮阴影增强)
-  if (cfg.frameType === 'float') {
+  // =========================================
+  // 2. 预设特效层 — 悬浮阴影 / 装裱阴影
+  // =========================================
+  
+  // Floating Print: 悬浮双层阴影
+  if (ft === 'floating' && minBorder > 0) {
     ctx.save();
-    // 第一层：大范围弥散阴影
-    ctx.shadowColor = 'rgba(0,0,0,0.12)';
-    ctx.shadowBlur = Math.max(photoW, photoH) * 0.12;
-    ctx.shadowOffsetY = ctx.shadowBlur * 0.4;
-    ctx.fillStyle = "rgba(0,0,0,0.1)"; 
+    ctx.shadowColor = 'rgba(0,0,0,0.10)';
+    ctx.shadowBlur = Math.max(photoW, photoH) * 0.10;
+    ctx.shadowOffsetY = ctx.shadowBlur * 0.35;
+    ctx.fillStyle = 'rgba(0,0,0,0.05)';
     roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
     ctx.fill();
-    
-    // 第二层：核心深色阴影
-    ctx.shadowColor = 'rgba(0,0,0,0.25)';
-    ctx.shadowBlur = Math.max(photoW, photoH) * 0.04;
-    ctx.shadowOffsetY = ctx.shadowBlur * 0.3;
+    ctx.shadowColor = 'rgba(0,0,0,0.20)';
+    ctx.shadowBlur = Math.max(photoW, photoH) * 0.03;
+    ctx.shadowOffsetY = ctx.shadowBlur * 0.5;
     ctx.fill();
     ctx.restore();
   }
 
-  // 3.5 环境光晕 (Outer Glow)
+  // Gallery Black / Museum White / Darkroom / Shadow Mat: 装裱内凹阴影
+  if (['gallery-black', 'museum-white', 'darkroom', 'shadow-mat'].includes(ft) && minBorder > 0) {
+    ctx.save();
+    // 外层卡纸切割暗边
+    const bevelSize = Math.max(1.5, Math.round(minBorder * 0.015));
+    ctx.strokeStyle = ft === 'darkroom' ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.18)';
+    ctx.lineWidth = bevelSize;
+    roundRectPath(ctx, drawX - bevelSize/2, drawY - bevelSize/2, drawnW + bevelSize, drawnH + bevelSize, pR);
+    ctx.stroke();
+    
+    // 内层亮边（卡纸切割反光）
+    ctx.strokeStyle = ft === 'darkroom' ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.4)';
+    ctx.lineWidth = Math.max(0.5, bevelSize * 0.4);
+    roundRectPath(ctx, drawX + bevelSize * 0.3, drawY + bevelSize * 0.3, drawnW - bevelSize * 0.6, drawnH - bevelSize * 0.6, pR);
+    ctx.stroke();
+
+    // Shadow Mat 特殊：加重内凹阴影
+    const shadowMult = ft === 'shadow-mat' ? 2.2 : 1.0;
+    const shadowDepth = Math.max(6, Math.round(minBorder * 0.08 * shadowMult));
+    const shadowAlpha = ft === 'shadow-mat' ? 0.18 : (ft === 'darkroom' ? 0.15 : 0.10);
+    
+    // 上侧内阴影
+    const topGrad = ctx.createLinearGradient(drawX, drawY, drawX, drawY + shadowDepth);
+    topGrad.addColorStop(0, `rgba(0,0,0,${shadowAlpha})`);
+    topGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = topGrad;
+    ctx.fillRect(drawX, drawY, drawnW, shadowDepth);
+    // 左侧内阴影
+    const leftGrad = ctx.createLinearGradient(drawX, drawY, drawX + shadowDepth, drawY);
+    leftGrad.addColorStop(0, `rgba(0,0,0,${shadowAlpha * 0.7})`);
+    leftGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = leftGrad;
+    ctx.fillRect(drawX, drawY, shadowDepth, drawnH);
+    // 下侧/右侧微弱高光（Shadow Mat 额外）
+    if (ft === 'shadow-mat') {
+      const botGrad = ctx.createLinearGradient(drawX, drawY + drawnH, drawX, drawY + drawnH - shadowDepth * 0.6);
+      botGrad.addColorStop(0, 'rgba(0,0,0,0.06)');
+      botGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = botGrad;
+      ctx.fillRect(drawX, drawY + drawnH - shadowDepth * 0.6, drawnW, shadowDepth * 0.6);
+    }
+    ctx.restore();
+  }
+
+  // =========================================
+  // 3. 边缘特效层（通用：溶解/光晕）
+  // =========================================
+  
+  // 环境光晕 (Outer Glow)
   if (cfg.photoStrokeOn && cfg.photoStrokeColor === 'rgba(255,255,255,0.7)' && cfg.photoStrokeWidth > 0) {
     ctx.save();
     const dynamicBase = Math.max(canvasW, canvasH);
     const blurRadius = Math.round(dynamicBase * cfg.photoStrokeWidth / 200);
-    ctx.shadowColor = cfg.frameColor === '#ffffff' ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.3)';
+    const isDark = ['gallery-black', 'floating', 'darkroom'].includes(ft);
+    ctx.shadowColor = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)';
     ctx.shadowBlur = blurRadius;
-    ctx.fillStyle = cfg.frameColor === '#ffffff' ? 'rgba(0,0,0,1)' : 'rgba(255,255,255,1)';
+    ctx.fillStyle = isDark ? 'rgba(255,255,255,1)' : 'rgba(0,0,0,1)';
     roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
     ctx.fill();
     ctx.restore();
   }
 
-  // 4. 绘制照片 (裁剪圆角)
-  // 预览时使用降采样图提高性能，导出时用原图
+  // =========================================
+  // 4. 绘制照片
+  // =========================================
   const renderImg = item.previewImg || item.img;
   ctx.save();
   roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
   ctx.clip();
   ctx.drawImage(renderImg, drawX, drawY, drawnW, drawnH);
 
-  // 4.5 边缘无缝溶解羽化 (Inner Feather Fade)
+  // 边缘无缝溶解羽化 (Inner Feather Fade)
   if (cfg.photoStrokeOn && cfg.photoStrokeColor === 'rgba(0,0,0,0.5)' && cfg.photoStrokeWidth > 0) {
     const dynamicBase = Math.max(canvasW, canvasH);
     const blurRadius = Math.round(dynamicBase * cfg.photoStrokeWidth / 150);
@@ -756,61 +892,26 @@ function render() {
     ctx.lineWidth = blurRadius;
     ctx.shadowColor = cfg.frameColor;
     ctx.shadowBlur = blurRadius * 1.5;
-    // 由于之前已经 ctx.clip() 限定在照片边缘内侧，这道带有高斯模糊的粗线只会向内渗透，制造完美的图片融入背景的错觉。
     roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
     ctx.stroke();
   }
   ctx.restore();
 
-  // 5. 装饰层：Museum / Gallery 艺术装裱增强
-  if ((cfg.frameType === 'museum' || cfg.frameType === 'gallery') && bT > 0) {
-    ctx.save();
-    // 卡纸切割边缘 — 外层暗边
-    const bevelSize = Math.max(2, Math.round(Math.min(bT, bL) * 0.02));
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
-    ctx.lineWidth = bevelSize;
-    roundRectPath(ctx, drawX - bevelSize/2, drawY - bevelSize/2, drawnW + bevelSize, drawnH + bevelSize, pR);
-    ctx.stroke();
-    
-    // 内层亮边 — 模拟卡纸切割的反光
-    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
-    ctx.lineWidth = Math.max(1, bevelSize * 0.5);
-    roundRectPath(ctx, drawX + bevelSize * 0.3, drawY + bevelSize * 0.3, drawnW - bevelSize * 0.6, drawnH - bevelSize * 0.6, pR);
-    ctx.stroke();
-
-    // 内部微弱渐变，体现凹陷感
-    const shadowDepth = Math.max(8, Math.round(Math.min(bT, bL) * 0.08));
-    // 上边暗角
-    const topGrad = ctx.createLinearGradient(drawX, drawY, drawX, drawY + shadowDepth);
-    topGrad.addColorStop(0, 'rgba(0,0,0,0.12)');
-    topGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = topGrad;
-    ctx.fillRect(drawX, drawY, drawnW, shadowDepth);
-    // 左边暗角
-    const leftGrad = ctx.createLinearGradient(drawX, drawY, drawX + shadowDepth, drawY);
-    leftGrad.addColorStop(0, 'rgba(0,0,0,0.08)');
-    leftGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = leftGrad;
-    ctx.fillRect(drawX, drawY, shadowDepth, drawnH);
-    ctx.restore();
-  }
-
-  // 6. 装饰层：Film 穿孔
-  if (cfg.frameType === 'film' && bT > 0) {
-    drawFilmHoles(ctx, bT, bB, canvasW, canvasH);
-  }
-
-  // 7. 边缘晕影功能
+  // =========================================
+  // 5. 后期效果
+  // =========================================
+  
+  // 晕影
   if (cfg.shadowOn) {
     drawVignette(ctx, drawX, drawY, drawnW, drawnH, pR, cfg.shadowIntensity);
   }
 
-  // 8. 网格辅助线
+  // 拖拽辅助线
   if (state.isDragging) {
     drawGrid(ctx, photoX, photoY, photoW, photoH);
   }
 
-  // 9. 胶片颗粒效果
+  // 胶片颗粒
   if (cfg.grainOn && cfg.grainIntensity > 0) {
     const grainAlpha = cfg.grainIntensity * 0.006;
     applyGrain(ctx, drawX, drawY, drawnW, drawnH, grainAlpha);
@@ -827,12 +928,20 @@ function computeDims(item) {
   const cfg = item.config;
   const base = Math.round(Math.min(img.width, img.height) * cfg.frameWidth / 100);
 
-  let bT = base, bR = base, bB = base, bL = base;
-  if (cfg.frameType === 'polaroid') { bB = Math.round(base * 3.2); }
-  else if (cfg.frameType === 'film') { bT = Math.round(base * 1.6); bB = Math.round(base * 1.6); }
-  else if (cfg.frameType === 'museum') { bT = bR = bB = bL = Math.round(base * 1.5); }
-  else if (cfg.frameType === 'gallery') { bT = bR = bB = bL = Math.round(base * 2.0); }
-  else if (cfg.frameType === 'none') { bT = bR = bB = bL = 0; }
+  // 每种预设的边框倍率
+  const multipliers = {
+    'gallery-black':  1.6,
+    'museum-white':   1.4,
+    'editorial':      1.0,
+    'floating':       1.2,
+    'soft-ivory':     1.3,
+    'darkroom':       1.5,
+    'thin-archive':   1.0,
+    'shadow-mat':     1.5,
+  };
+  const mult = multipliers[cfg.frameType] || 1.0;
+  let bT = Math.round(base * mult);
+  let bR = bT, bB = bT, bL = bT;
 
   const photoW = img.width;
   const photoH = img.height;
@@ -849,12 +958,8 @@ function computeDims(item) {
 
   // 动态计算该比例下的边框
   const dynamicBase = Math.round(Math.min(canvasW, canvasH) * cfg.frameWidth / 100);
-  let dbT = dynamicBase, dbR = dynamicBase, dbB = dynamicBase, dbL = dynamicBase;
-  if (cfg.frameType === 'polaroid') { dbB = Math.round(dynamicBase * 3.2); }
-  else if (cfg.frameType === 'film') { dbT = Math.round(dynamicBase * 1.6); dbB = Math.round(dynamicBase * 1.6); }
-  else if (cfg.frameType === 'museum') { dbT = dbR = dbB = dbL = Math.round(dynamicBase * 1.5); }
-  else if (cfg.frameType === 'gallery') { dbT = dbR = dbB = dbL = Math.round(dynamicBase * 2.0); }
-  else if (cfg.frameType === 'none') { dbT = dbR = dbB = dbL = 0; }
+  let dbT = Math.round(dynamicBase * mult);
+  let dbR = dbT, dbB = dbT, dbL = dbT;
 
   const innerW = Math.max(1, canvasW - dbL - dbR);  // 防止边框过大挤占至 0 或负数
   const innerH = Math.max(1, canvasH - dbT - dbB);
@@ -997,7 +1102,11 @@ function updateStatusBar() {
   }
   els.statusText.textContent = `策展中 · ${state.items.length} 张照片`;
   els.statusInfo.textContent = `尺寸: ${item.img.width}×${item.img.height}`;
-  const presetNames = { white: '极简白', black: '暗调黑', museum: '美术馆', gallery: '画廊裱', none: '仅照片' };
+  const presetNames = {
+    'gallery-black': '画廊黑', 'museum-white': '美术馆', 'editorial': '编辑风',
+    'floating': '悬浮感', 'soft-ivory': '象牙白', 'darkroom': '暗房裱',
+    'thin-archive': '档案线', 'shadow-mat': '阴影裱'
+  };
   els.statusPreset.textContent = `预设: ${presetNames[item.config.frameType] || '--'}`;
 }
 
