@@ -1,6 +1,6 @@
 /**
- * Framer V4 - 高级照片边框编辑器
- * 功能：多图管理、高级边框、滤镜、撤销/重做、导出格式选择
+ * Framer V5 - 高级照片边框编辑器
+ * 功能：多图管理、高级边框预设、质感特效、撤销/重做、导出格式选择
  */
 
 // ================================
@@ -15,52 +15,11 @@ const state = {
   redoStack: [],
   exportFormat: 'png',
   exportQuality: 0.92,
-  // 拼图模式（独立功能，不依赖 state.items）
-  collageMode: false,
-  collageLayout: 'side-by-side',
-  collageRatio: '4:3',
-  collageBg: '#ffffff',
-  collageLayers: [],        // [{ img, previewImg, x, y, w, h, cornerRadius, borderWidth, borderColor, zIndex }]
-  selectedLayerIdx: -1,
-  layerDragMode: null,      // 'move' | 'resize-nw/ne/sw/se'
 };
 
 const MAX_HISTORY = 40;
 
-// 拼图布局模板（每个 region 是 0~1 的比例坐标）
-const COLLAGE_LAYOUTS = {
-  'side-by-side': {
-    slots: 2,
-    regions: [
-      { x: 0, y: 0, w: 0.5, h: 1 },
-      { x: 0.5, y: 0, w: 0.5, h: 1 }
-    ]
-  },
-  'top-bottom': {
-    slots: 2,
-    regions: [
-      { x: 0, y: 0, w: 1, h: 0.5 },
-      { x: 0, y: 0.5, w: 1, h: 0.5 }
-    ]
-  },
-  'grid-2x2': {
-    slots: 4,
-    regions: [
-      { x: 0, y: 0, w: 0.5, h: 0.5 },
-      { x: 0.5, y: 0, w: 0.5, h: 0.5 },
-      { x: 0, y: 0.5, w: 0.5, h: 0.5 },
-      { x: 0.5, y: 0.5, w: 0.5, h: 0.5 }
-    ]
-  },
-  'one-two': {
-    slots: 3,
-    regions: [
-      { x: 0, y: 0, w: 0.55, h: 1 },
-      { x: 0.55, y: 0, w: 0.45, h: 0.5 },
-      { x: 0.55, y: 0.5, w: 0.45, h: 0.5 }
-    ]
-  }
-};
+
 
 // 极简高定风格预设初始颜色
 const BORDER_DEFAULTS = {
@@ -92,21 +51,26 @@ const createDefaultConfig = (frame = 'white') => ({
 // DOM 引用
 // ================================
 const els = {
+  // 上传区
   uploadZone:   document.getElementById('uploadZone'),
+  emptyState:   document.getElementById('emptyState'),
   fileInput:    document.getElementById('fileInput'),
-  btnUpload:    document.getElementById('btnUpload'),
   btnReupload:  document.getElementById('btnReupload'),
+  thumbArea:    document.getElementById('thumbArea'),
+  // 画布
   canvasWrap:   document.getElementById('canvasWrap'),
   canvas:       document.getElementById('previewCanvas'),
   ctx:          document.getElementById('previewCanvas').getContext('2d'),
   thumbStrip:   document.getElementById('thumbnailStrip'),
+  // 操作按钮
   batchActions: document.getElementById('batchActions'),
   btnDownload:  document.getElementById('btnDownload'),
+  btnDownloadSingle: document.getElementById('btnDownloadSingle'),
   btnUndo:      document.getElementById('btnUndo'),
   btnRedo:      document.getElementById('btnRedo'),
   btnSyncAll:   document.getElementById('btnSyncAll'),
   btnDownloadAll: document.getElementById('btnDownloadAll'),
-  // Controls
+  // 控件
   ratioGrid:    document.getElementById('ratioGrid'),
   frameGrid:    document.getElementById('frameGrid'),
   strokeToggle: document.getElementById('strokeToggle'),
@@ -135,22 +99,10 @@ const els = {
   grainToggle:    document.getElementById('grainToggle'),
   grainIntensity: document.getElementById('grainIntensity'),
   grainSliderWrap: document.getElementById('grainSliderWrap'),
-  // 拼图
-  btnCollage:     document.getElementById('btnCollage'),
-  collagePanel:   document.getElementById('collagePanel'),
-  controlPanel:   document.getElementById('controlPanel'),
-  layoutGrid:     document.getElementById('layoutGrid'),
-  layerLabel:     document.getElementById('layerLabel'),
-  layerRadius:    document.getElementById('layerRadius'),
-  layerRadiusVal: document.getElementById('layerRadiusVal'),
-  layerBorder:    document.getElementById('layerBorder'),
-  layerBorderVal: document.getElementById('layerBorderVal'),
-  layerColorPicker: document.getElementById('layerColorPicker'),
-  layerUp:        document.getElementById('layerUp'),
-  layerDown:      document.getElementById('layerDown'),
-  collageBgPicker: document.getElementById('collageBgPicker'),
-  btnCollageAdd:   document.getElementById('btnCollageAdd'),
-  collageFileInput: document.getElementById('collageFileInput'),
+  // 状态栏
+  statusText:   document.getElementById('statusText'),
+  statusInfo:   document.getElementById('statusInfo'),
+  statusPreset: document.getElementById('statusPreset'),
 };
 
 // ================================
@@ -160,8 +112,7 @@ let rafId = null;
 const scheduleRender = () => {
   if (rafId) cancelAnimationFrame(rafId);
   rafId = requestAnimationFrame(() => {
-    if (state.collageMode) renderCollage();
-    else render();
+    render();
     rafId = null;
   });
 };
@@ -170,19 +121,20 @@ const scheduleRender = () => {
 // 初始化与事件绑定
 // ================================
 function init() {
+  // 上传交互（空状态 + 侧边栏上传区）
+  els.emptyState.onclick = () => els.fileInput.click();
   els.uploadZone.onclick = () => els.fileInput.click();
-  els.btnUpload.onclick = (e) => { e.stopPropagation(); els.fileInput.click(); };
   els.fileInput.onchange = (e) => handleFiles(e.target.files);
 
-  // 拖拽上传
-  els.uploadZone.ondragover = (e) => { e.preventDefault(); els.uploadZone.classList.add('drag-over'); };
-  els.uploadZone.ondragleave = () => els.uploadZone.classList.remove('drag-over');
-  els.uploadZone.ondrop = (e) => {
-    e.preventDefault(); els.uploadZone.classList.remove('drag-over');
+  // 拖拽上传（在中央画布区）
+  const canvasArea = document.querySelector('.canvas-area');
+  canvasArea.addEventListener('dragover', (e) => { e.preventDefault(); });
+  canvasArea.addEventListener('drop', (e) => {
+    e.preventDefault();
     handleFiles(e.dataTransfer.files);
-  };
+  });
 
-  document.getElementById('btnReupload').onclick = () => els.fileInput.click();
+  els.btnReupload.onclick = () => els.fileInput.click();
 
   // 拖动监听 (Canvas)
   els.canvas.addEventListener('mousedown', startDrag);
@@ -218,6 +170,23 @@ function init() {
   });
 
   bindControlEvents();
+  initPanelSwitching();
+}
+
+/**
+ * 面板切换逻辑：点击左侧导航项切换显示对应面板
+ */
+function initPanelSwitching() {
+  const navItems = document.querySelectorAll('.nav-item');
+  const panels = document.querySelectorAll('.panel-content');
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      const targetId = item.dataset.panel;
+      navItems.forEach(n => n.classList.remove('active'));
+      item.classList.add('active');
+      panels.forEach(p => p.hidden = (p.id !== targetId));
+    });
+  });
 }
 
 /**
@@ -352,84 +321,9 @@ function bindControlEvents() {
   els.btnRedo.onclick = redo;
   els.btnSyncAll.onclick = syncAllConfigs;
   els.btnDownloadAll.onclick = batchDownload;
-  els.btnDownload.onclick = () => {
-    if (state.collageMode) { downloadCollage(); }
-    else { downloadOne(getActiveItem()); }
-  };
-
-  // 拼图模式
-  els.btnCollage.onclick = toggleCollageMode;
-  els.layoutGrid.addEventListener('click', (e) => {
-    const btn = e.target.closest('.layout-item');
-    if (!btn) return;
-    state.collageLayout = btn.dataset.layout;
-    initCollageLayers();
-    els.layoutGrid.querySelectorAll('.layout-item').forEach(b => 
-      b.classList.toggle('active', b.dataset.layout === state.collageLayout)
-    );
-    scheduleRender();
-  });
-  // 图层控件
-  els.layerRadius.oninput = (e) => {
-    const layer = state.collageLayers[state.selectedLayerIdx];
-    if (!layer) return;
-    layer.cornerRadius = parseInt(e.target.value);
-    els.layerRadiusVal.textContent = e.target.value;
-    scheduleRender();
-  };
-  els.layerBorder.oninput = (e) => {
-    const layer = state.collageLayers[state.selectedLayerIdx];
-    if (!layer) return;
-    layer.borderWidth = parseInt(e.target.value);
-    els.layerBorderVal.textContent = e.target.value + '%';
-    scheduleRender();
-  };
-  document.querySelectorAll('[data-lcolor]').forEach(sw => {
-    sw.onclick = () => {
-      const layer = state.collageLayers[state.selectedLayerIdx];
-      if (!layer) return;
-      layer.borderColor = sw.dataset.lcolor;
-      document.querySelectorAll('[data-lcolor]').forEach(s => s.classList.remove('active'));
-      sw.classList.add('active');
-      scheduleRender();
-    };
-  });
-  els.layerColorPicker.oninput = (e) => {
-    const layer = state.collageLayers[state.selectedLayerIdx];
-    if (!layer) return;
-    layer.borderColor = e.target.value;
-    scheduleRender();
-  };
-  els.layerUp.onclick = () => moveLayer(1);
-  els.layerDown.onclick = () => moveLayer(-1);
-  // 画布背景
-  document.querySelectorAll('[data-bgc]').forEach(sw => {
-    sw.onclick = () => {
-      state.collageBg = sw.dataset.bgc;
-      document.querySelectorAll('[data-bgc]').forEach(s => s.classList.remove('active'));
-      sw.classList.add('active');
-      scheduleRender();
-    };
-  });
-  els.collageBgPicker.oninput = (e) => {
-    state.collageBg = e.target.value;
-    scheduleRender();
-  };
-  // 拼图模式：添加照片
-  els.btnCollageAdd.onclick = () => els.collageFileInput.click();
-  els.collageFileInput.onchange = (e) => {
-    addPhotosToCollage(e.target.files);
-    e.target.value = '';
-  };
-  // 拼图画布比例
-  document.querySelectorAll('[data-cratio]').forEach(btn => {
-    btn.onclick = () => {
-      state.collageRatio = btn.dataset.cratio;
-      document.querySelectorAll('[data-cratio]').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      scheduleRender();
-    };
-  });
+  // 两个下载入口：顶栏导出按钮 + 导出面板下载按钮
+  els.btnDownload.onclick = () => downloadOne(getActiveItem());
+  if (els.btnDownloadSingle) els.btnDownloadSingle.onclick = () => downloadOne(getActiveItem());
 
   // 自定义比例
   document.getElementById('btnApplyCustomRatio').onclick = () => {
@@ -461,14 +355,18 @@ async function handleFiles(files) {
   
   if (isFirstLoad) {
     state.activeIndex = 0;
-    els.uploadZone.hidden = true;
+    els.emptyState.hidden = true;
     els.canvasWrap.hidden = false;
     els.batchActions.hidden = false;
     els.btnDownload.disabled = false;
+    if (els.btnDownloadSingle) els.btnDownloadSingle.disabled = false;
+    els.btnReupload.hidden = false;
+    els.thumbArea.hidden = false;
   }
 
   renderThumbnails();
   syncUI();
+  updateStatusBar();
   scheduleRender();
 }
 
@@ -630,13 +528,13 @@ function syncUI() {
   els.customColor.value = cfg.frameColor;
   els.colorSwatches.forEach(sw => sw.classList.toggle('active', sw.dataset.color === cfg.frameColor));
   // 阴影开关
-  els.shadowToggle.textContent = cfg.shadowOn ? '开 启' : '关 闭';
+  els.shadowToggle.textContent = cfg.shadowOn ? '开启' : '关闭';
   els.shadowToggle.classList.toggle('on', cfg.shadowOn);
-  els.shadowWrap.classList.toggle('shadow-slider-disabled', !cfg.shadowOn);
-  // 隔离线
-  els.strokeToggle.textContent = cfg.photoStrokeOn ? '开 启' : '关 闭';
+  els.shadowWrap.classList.toggle('disabled-slider', !cfg.shadowOn);
+  // 边缘融合
+  els.strokeToggle.textContent = cfg.photoStrokeOn ? '开启' : '关闭';
   els.strokeToggle.classList.toggle('on', cfg.photoStrokeOn);
-  els.strokeSliderWrap.classList.toggle('shadow-slider-disabled', !cfg.photoStrokeOn);
+  els.strokeSliderWrap.classList.toggle('disabled-slider', !cfg.photoStrokeOn);
   els.strokeColorOptions.hidden = !cfg.photoStrokeOn;
   els.strokeWidth.value = cfg.photoStrokeWidth || 1;
   const isBlack = cfg.photoStrokeColor === 'rgba(0,0,0,0.5)';
@@ -648,10 +546,12 @@ function syncUI() {
   els.gradientColor2Wrap.hidden = !cfg.gradientOn;
   els.gradientColor2.value = cfg.gradientColor2;
   // 胶片颗粒
-  els.grainToggle.textContent = cfg.grainOn ? '开 启' : '关 闭';
+  els.grainToggle.textContent = cfg.grainOn ? '开启' : '关闭';
   els.grainToggle.classList.toggle('on', cfg.grainOn);
-  els.grainSliderWrap.classList.toggle('shadow-slider-disabled', !cfg.grainOn);
+  els.grainSliderWrap.classList.toggle('disabled-slider', !cfg.grainOn);
   els.grainIntensity.value = cfg.grainIntensity;
+  // 状态栏
+  updateStatusBar();
 }
 
 function renderThumbnails() {
@@ -686,13 +586,16 @@ function deleteItem(index) {
   
   // 处理 activeIndex
   if (state.items.length === 0) {
-    // 全部删完，回到上传界面
     state.activeIndex = -1;
     state.history = [];
-    els.uploadZone.hidden = false;
+    els.emptyState.hidden = false;
     els.canvasWrap.hidden = true;
     els.batchActions.hidden = true;
     els.btnDownload.disabled = true;
+    if (els.btnDownloadSingle) els.btnDownloadSingle.disabled = true;
+    els.btnReupload.hidden = true;
+    els.thumbArea.hidden = true;
+    updateStatusBar();
     return;
   }
   
@@ -712,7 +615,7 @@ function deleteItem(index) {
 // 拖拽逻辑
 // ================================
 function startDrag(e) {
-  if (state.collageMode) { startCollageDrag(e); return; }
+
   if (!state.items.length) return;
   const item = getActiveItem();
   state.isDragging = true;
@@ -725,7 +628,7 @@ function startDrag(e) {
 }
 
 function doDrag(e) {
-  if (state.collageMode) { doCollageDrag(e); return; }
+
   if (!state.isDragging) return;
   const item = getActiveItem();
   const rect = els.canvas.getBoundingClientRect();
@@ -737,7 +640,7 @@ function doDrag(e) {
 
 function stopDrag() {
   if (state.isDragging) {
-    if (state.collageMode) { stopCollageDrag(); return; }
+
     state.isDragging = false;
     els.canvas.style.cursor = 'grab';
     scheduleRender();
@@ -1072,11 +975,30 @@ function applyGrain(ctx, x, y, w, h, opacity) {
 }
 
 function fitDisplay() {
-  const clientW = els.canvasWrap.clientWidth - 48;
-  const clientH = 520;  // 与预览区高度匹配，作为唯一尺寸约束
+  const wrap = els.canvasWrap;
+  const clientW = wrap.clientWidth - 80;
+  const clientH = wrap.clientHeight - 80;
+  if (clientW <= 0 || clientH <= 0) return;
   const ratio = Math.min(clientW / els.canvas.width, clientH / els.canvas.height, 1);
   els.canvas.style.width  = Math.round(els.canvas.width * ratio) + 'px';
   els.canvas.style.height = Math.round(els.canvas.height * ratio) + 'px';
+}
+
+/**
+ * 状态栏更新
+ */
+function updateStatusBar() {
+  const item = getActiveItem();
+  if (!item) {
+    els.statusText.textContent = '等待输入...';
+    els.statusInfo.textContent = '尺寸: --';
+    els.statusPreset.textContent = '预设: --';
+    return;
+  }
+  els.statusText.textContent = `策展中 · ${state.items.length} 张照片`;
+  els.statusInfo.textContent = `尺寸: ${item.img.width}×${item.img.height}`;
+  const presetNames = { white: '极简白', black: '暗调黑', museum: '美术馆', gallery: '画廊裱', none: '仅照片' };
+  els.statusPreset.textContent = `预设: ${presetNames[item.config.frameType] || '--'}`;
 }
 
 // ================================
@@ -1183,366 +1105,8 @@ function showToast(msg) {
 }
 
 // ================================
-// 拼图模式（独立功能）
+// 启动
 // ================================
-
-const COLLAGE_W = 2400;
-const COLLAGE_H = 1800;
-const HANDLE_SZ = 20;
-const PREVIEW_MAX_C = 1600; // 拼图预览降采样上限
-
-function toggleCollageMode() {
-  state.collageMode = !state.collageMode;
-  els.btnCollage.classList.toggle('active', state.collageMode);
-  els.collagePanel.hidden = !state.collageMode;
-
-  if (state.collageMode) {
-    // 进入拼图模式：显示画布，隐藏普通编辑区
-    els.uploadZone.style.display = 'none';
-    els.canvasWrap.hidden = false;
-    els.btnReupload.hidden = true;
-    els.btnCollageAdd.hidden = false;
-    els.controlPanel.hidden = true;
-    document.querySelector('.thumbnail-outer').style.display = 'none';
-    if (state.collageLayers.length === 0) {
-      renderCollage();
-    } else {
-      scheduleRender();
-    }
-  } else {
-    // 退出拼图模式：恢复普通状态
-    els.btnCollageAdd.hidden = true;
-    els.btnReupload.hidden = false;
-    els.controlPanel.hidden = false;
-    document.querySelector('.thumbnail-outer').style.display = '';
-    if (state.items.length) {
-      els.canvasWrap.hidden = false;
-      els.uploadZone.style.display = 'none';
-    } else {
-      els.canvasWrap.hidden = true;
-      els.uploadZone.style.display = '';
-    }
-    state.collageLayers = [];
-    state.selectedLayerIdx = -1;
-    scheduleRender();
-  }
-}
-
-/** 拼图模式专用：上传照片并添加为图层 */
-async function addPhotosToCollage(files) {
-  if (!files || !files.length) return;
-  for (const file of files) {
-    if (!file.type.startsWith('image/')) continue;
-    const imgData = await loadCollageImage(file);
-    // 计算默认大小（根据图层数自适应缩小）
-    const { w: CW, h: CH } = getCollageSize();
-    const totalAfter = state.collageLayers.length + 1;
-    const sizeFactor = totalAfter <= 2 ? 0.5 : totalAfter <= 4 ? 0.4 : 0.3;
-    const maxW = CW * sizeFactor;
-    const maxH = CH * sizeFactor;
-    const ratio = Math.min(maxW / imgData.img.width, maxH / imgData.img.height, 1);
-    const w = Math.round(imgData.img.width * ratio);
-    const h = Math.round(imgData.img.height * ratio);
-    // 偏移避免完全重叠（按序散开）
-    const idx = state.collageLayers.length;
-    const cols = Math.ceil(Math.sqrt(totalAfter));
-    const col = idx % cols;
-    const row = Math.floor(idx / cols);
-    const cellW = CW / cols;
-    const cellH = CH / Math.ceil(totalAfter / cols);
-    state.collageLayers.push({
-      img: imgData.img,
-      previewImg: imgData.previewImg,
-      x: Math.round(col * cellW + (cellW - w) / 2),
-      y: Math.round(row * cellH + (cellH - h) / 2),
-      w, h,
-      cornerRadius: 0,
-      borderWidth: 0,
-      borderColor: '#ffffff',
-      zIndex: state.collageLayers.length
-    });
-  }
-  state.selectedLayerIdx = state.collageLayers.length - 1;
-  syncLayerUI();
-  scheduleRender();
-}
-
-/** 加载单张图片（拼图专用） */
-function loadCollageImage(file) {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        let previewImg = img;
-        if (img.width > PREVIEW_MAX_C || img.height > PREVIEW_MAX_C) {
-          previewImg = createPreview(img);
-        }
-        resolve({ img, previewImg });
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-/** 布局模板：重新排列当前图层 */
-function initCollageLayers() {
-  if (!state.collageLayers.length) return;
-  const { w: CW, h: CH } = getCollageSize();
-  const gap = 30;
-  const count = state.collageLayers.length;
-  const layout = COLLAGE_LAYOUTS[state.collageLayout];
-
-  // 如果模板region数 >= 图层数，直接用模板；否则自动均分网格
-  if (layout && layout.regions.length >= count) {
-    state.collageLayers.forEach((layer, i) => {
-      const r = layout.regions[i];
-      layer.x = Math.round(r.x * CW + gap);
-      layer.y = Math.round(r.y * CH + gap);
-      layer.w = Math.round(r.w * CW - gap * 2);
-      layer.h = Math.round(r.h * CH - gap * 2);
-      layer.zIndex = i;
-    });
-  } else {
-    // 自动网格：根据图层数计算行列
-    const cols = Math.ceil(Math.sqrt(count));
-    const rows = Math.ceil(count / cols);
-    const cellW = CW / cols;
-    const cellH = CH / rows;
-    state.collageLayers.forEach((layer, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      layer.x = Math.round(col * cellW + gap);
-      layer.y = Math.round(row * cellH + gap);
-      layer.w = Math.round(cellW - gap * 2);
-      layer.h = Math.round(cellH - gap * 2);
-      layer.zIndex = i;
-    });
-  }
-  state.selectedLayerIdx = 0;
-  syncLayerUI();
-}
-
-function syncLayerUI() {
-  const layer = state.collageLayers[state.selectedLayerIdx];
-  if (!layer) { els.layerLabel.textContent = '未选择'; return; }
-  els.layerLabel.textContent = '#' + (state.selectedLayerIdx + 1);
-  els.layerRadius.value = layer.cornerRadius;
-  els.layerRadiusVal.textContent = layer.cornerRadius;
-  els.layerBorder.value = layer.borderWidth;
-  els.layerBorderVal.textContent = layer.borderWidth + '%';
-  els.layerColorPicker.value = layer.borderColor;
-}
-
-function moveLayer(dir) {
-  const layer = state.collageLayers[state.selectedLayerIdx];
-  if (!layer) return;
-  const sorted = [...state.collageLayers].sort((a, b) => a.zIndex - b.zIndex);
-  const pos = sorted.indexOf(layer);
-  const target = pos + dir;
-  if (target < 0 || target >= sorted.length) return;
-  const tmp = layer.zIndex;
-  layer.zIndex = sorted[target].zIndex;
-  sorted[target].zIndex = tmp;
-  scheduleRender();
-}
-
-function getCollageSize() {
-  const base = 2400;
-  const [rw, rh] = state.collageRatio.split(':').map(Number);
-  return { w: base, h: Math.round(base * rh / rw) };
-}
-
-function renderCollage() {
-  const { w: CW, h: CH } = getCollageSize();
-  const ctx = els.ctx;
-  els.canvas.width = CW;
-  els.canvas.height = CH;
-
-  // 画布背景
-  ctx.fillStyle = state.collageBg;
-  ctx.fillRect(0, 0, CW, CH);
-
-  if (!state.collageLayers.length) {
-    // 空画布提示
-    ctx.fillStyle = 'rgba(255,255,255,0.15)';
-    ctx.font = 'bold 48px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('点击「+ 添加照片」开始拼图', CW / 2, CH / 2);
-    fitDisplay();
-    return;
-  }
-
-  const sorted = [...state.collageLayers]
-    .map((l, i) => ({ ...l, _i: i }))
-    .sort((a, b) => a.zIndex - b.zIndex);
-
-  sorted.forEach(layer => {
-    const { x, y, w, h, cornerRadius, borderWidth, borderColor } = layer;
-    const bw = Math.round(Math.min(w, h) * borderWidth / 100);
-    const oR = Math.min(w, h) / 2 * cornerRadius / 50;
-
-    // 边框
-    if (bw > 0) {
-      ctx.save();
-      ctx.fillStyle = borderColor;
-      roundRectPath(ctx, x, y, w, h, oR);
-      ctx.fill();
-      ctx.restore();
-    }
-
-    // 照片
-    const px = x + bw, py = y + bw, pw = w - bw * 2, ph = h - bw * 2;
-    if (pw <= 0 || ph <= 0) return;
-    const iR = Math.max(0, oR - bw);
-    ctx.save();
-    roundRectPath(ctx, px, py, pw, ph, iR);
-    ctx.clip();
-
-    const img = layer.previewImg || layer.img;
-    const ia = img.width / img.height, sa = pw / ph;
-    let dw, dh;
-    if (ia > sa) { dh = ph; dw = dh * ia; }
-    else { dw = pw; dh = dw / ia; }
-    ctx.drawImage(img, px + (pw - dw) / 2, py + (ph - dh) / 2, dw, dh);
-    ctx.restore();
-
-    // 选中高亮
-    if (layer._i === state.selectedLayerIdx) {
-      ctx.save();
-      ctx.strokeStyle = '#7c6bff';
-      ctx.lineWidth = 4;
-      ctx.setLineDash([12, 6]);
-      roundRectPath(ctx, x - 2, y - 2, w + 4, h + 4, oR);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = '#7c6bff';
-      const hs = HANDLE_SZ;
-      [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(([hx, hy]) => {
-        ctx.beginPath();
-        ctx.arc(hx, hy, hs / 2, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      ctx.restore();
-    }
-  });
-  fitDisplay();
-}
-
-function startCollageDrag(e) {
-  const rect = els.canvas.getBoundingClientRect();
-  const sx = els.canvas.width / rect.width;
-  const sy = els.canvas.height / rect.height;
-  const cx = (e.clientX - rect.left) * sx;
-  const cy = (e.clientY - rect.top) * sy;
-
-  // 检查缩放手柄
-  const sel = state.collageLayers[state.selectedLayerIdx];
-  if (sel) {
-    const hs = HANDLE_SZ;
-    const corners = [
-      { n: 'nw', hx: sel.x, hy: sel.y },
-      { n: 'ne', hx: sel.x + sel.w, hy: sel.y },
-      { n: 'sw', hx: sel.x, hy: sel.y + sel.h },
-      { n: 'se', hx: sel.x + sel.w, hy: sel.y + sel.h },
-    ];
-    for (const c of corners) {
-      if (Math.hypot(cx - c.hx, cy - c.hy) < hs) {
-        state.layerDragMode = 'resize-' + c.n;
-        state.isDragging = true;
-        state.drag = { x: e.clientX, y: e.clientY, ox: sel.x, oy: sel.y, ow: sel.w, oh: sel.h };
-        els.canvas.style.cursor = 'nwse-resize';
-        return;
-      }
-    }
-  }
-
-  // 点选图层
-  const sorted = [...state.collageLayers].map((l, i) => ({ ...l, idx: i })).sort((a, b) => b.zIndex - a.zIndex);
-  for (const layer of sorted) {
-    if (cx >= layer.x && cx <= layer.x + layer.w && cy >= layer.y && cy <= layer.y + layer.h) {
-      state.selectedLayerIdx = layer.idx;
-      state.layerDragMode = 'move';
-      state.isDragging = true;
-      const s = state.collageLayers[layer.idx];
-      state.drag = { x: e.clientX, y: e.clientY, ox: s.x, oy: s.y };
-      els.canvas.style.cursor = 'grabbing';
-      syncLayerUI();
-      scheduleRender();
-      return;
-    }
-  }
-  state.selectedLayerIdx = -1;
-  syncLayerUI();
-  scheduleRender();
-}
-
-function doCollageDrag(e) {
-  if (!state.isDragging || !state.layerDragMode) return;
-  const layer = state.collageLayers[state.selectedLayerIdx];
-  if (!layer) return;
-  const rect = els.canvas.getBoundingClientRect();
-  const sx = els.canvas.width / rect.width;
-  const sy = els.canvas.height / rect.height;
-  const dx = (e.clientX - state.drag.x) * sx;
-  const dy = (e.clientY - state.drag.y) * sy;
-  const MIN = 100;
-
-  if (state.layerDragMode === 'move') {
-    layer.x = state.drag.ox + dx;
-    layer.y = state.drag.oy + dy;
-  } else {
-    const c = state.layerDragMode.split('-')[1];
-    if (c === 'se') { layer.w = Math.max(MIN, state.drag.ow + dx); layer.h = Math.max(MIN, state.drag.oh + dy); }
-    else if (c === 'sw') { const nw = Math.max(MIN, state.drag.ow - dx); layer.x = state.drag.ox + state.drag.ow - nw; layer.w = nw; layer.h = Math.max(MIN, state.drag.oh + dy); }
-    else if (c === 'ne') { layer.w = Math.max(MIN, state.drag.ow + dx); const nh = Math.max(MIN, state.drag.oh - dy); layer.y = state.drag.oy + state.drag.oh - nh; layer.h = nh; }
-    else if (c === 'nw') { const nw = Math.max(MIN, state.drag.ow - dx); const nh = Math.max(MIN, state.drag.oh - dy); layer.x = state.drag.ox + state.drag.ow - nw; layer.y = state.drag.oy + state.drag.oh - nh; layer.w = nw; layer.h = nh; }
-  }
-  scheduleRender();
-}
-
-function stopCollageDrag() {
-  if (state.isDragging) {
-    state.isDragging = false;
-    state.layerDragMode = null;
-    els.canvas.style.cursor = 'default';
-  }
-}
-
-function downloadCollage() {
-  const offscreen = document.createElement('canvas');
-  const offCtx = offscreen.getContext('2d');
-  const origCtx = els.ctx, origCanvas = els.canvas;
-  els.ctx = offCtx; els.canvas = offscreen;
-
-  // 导出用原图
-  const savedPreviews = state.collageLayers.map(l => {
-    const s = l.previewImg;
-    l.previewImg = l.img;
-    return s;
-  });
-  const savedSel = state.selectedLayerIdx;
-  state.selectedLayerIdx = -1;
-  renderCollage();
-  state.selectedLayerIdx = savedSel;
-
-  const mime = state.exportFormat === 'jpeg' ? 'image/jpeg' : 'image/png';
-  const quality = state.exportFormat === 'jpeg' ? state.exportQuality : 1.0;
-  const ext = state.exportFormat === 'jpeg' ? '.jpg' : '.png';
-  const link = document.createElement('a');
-  link.download = 'framer_collage' + ext;
-  link.href = offscreen.toDataURL(mime, quality);
-  link.click();
-
-  state.collageLayers.forEach((l, i) => { l.previewImg = savedPreviews[i]; });
-  els.ctx = origCtx; els.canvas = origCanvas;
-  scheduleRender();
-}
-
-// 启动
-
-// 启动
 window.onload = () => {
   // 读取本地偷好缓存
   try {
