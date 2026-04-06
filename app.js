@@ -710,170 +710,233 @@ function render() {
   };
 
   // =========================================
-  // 1. 背景层 — 严格按设计稿分层渲染
+  // 1. 背景层 — 物理装裱渲染（光影 + 材质，无硬边线）
   // =========================================
   const ft = cfg.frameType;
 
+  // 通用辅助：绘制 45° 卡纸斜切压痕（四边内凹渐变阴影）
+  const drawMatBevel = (x, y, w, h, depth, alpha) => {
+    ctx.save();
+    // 上
+    const tG = ctx.createLinearGradient(x, y, x, y + depth);
+    tG.addColorStop(0, `rgba(0,0,0,${alpha})`);
+    tG.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = tG;
+    ctx.fillRect(x, y, w, depth);
+    // 左
+    const lG = ctx.createLinearGradient(x, y, x + depth * 0.8, y);
+    lG.addColorStop(0, `rgba(0,0,0,${alpha * 0.7})`);
+    lG.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = lG;
+    ctx.fillRect(x, y, depth * 0.8, h);
+    // 下（微弱反光，模拟光源从上方打下）
+    const bG = ctx.createLinearGradient(x, y + h, x, y + h - depth * 0.5);
+    bG.addColorStop(0, `rgba(255,255,255,${alpha * 0.15})`);
+    bG.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = bG;
+    ctx.fillRect(x, y + h - depth * 0.5, w, depth * 0.5);
+    // 右（微弱反光）
+    const rG = ctx.createLinearGradient(x + w, y, x + w - depth * 0.4, y);
+    rG.addColorStop(0, `rgba(255,255,255,${alpha * 0.1})`);
+    rG.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = rG;
+    ctx.fillRect(x + w - depth * 0.4, y, depth * 0.4, h);
+    ctx.restore();
+  };
+
   if (ft === 'gallery-black') {
-    // 设计稿结构: #050505 全画布 → #F4F4F4 冷白卡纸(p-1 padding) → 照片
+    // 黑色展览墙 + 冷白卡纸面 + 斜切阴影
     ctx.fillStyle = '#050505';
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 冷白卡纸层（比照片区域略大，模拟 p-1 的薄白边框）
-    const matPad = Math.max(2, Math.round(Math.min(drawnW, drawnH) * 0.008));
-    ctx.fillStyle = '#F4F4F4';
+    // 黑墙纹理（极微弱噪点，模拟墙面质感）
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.012);
+    // 冷白卡纸面（大面积围绕照片）
+    const matPad = Math.max(8, Math.round(minBorder * 0.35));
+    ctx.fillStyle = '#F2F1EF';
     ctx.fillRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2);
-    // 卡纸上极微弱内阴影（shadow-inner 效果）
-    ctx.save();
-    const giDepth = Math.max(4, Math.round(matPad * 3));
-    const giGrad = ctx.createLinearGradient(drawX - matPad, drawY - matPad, drawX - matPad, drawY - matPad + giDepth);
-    giGrad.addColorStop(0, 'rgba(0,0,0,0.06)');
-    giGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = giGrad;
-    ctx.fillRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, giDepth);
-    ctx.restore();
+    // 卡纸纸面纹理
+    applyGrain(ctx, drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2, 0.025);
+    // 卡纸斜切口阴影（照片开窗处）
+    const bevelDepth = Math.max(4, Math.round(matPad * 0.12));
+    drawMatBevel(drawX, drawY, drawnW, drawnH, bevelDepth, 0.15);
 
   } else if (ft === 'museum-white') {
-    // 设计稿结构: #E5E2DB 暖白底(p-16) → 白色卡纸(shadow-md, border #D7D4CD/20, p-8) → 照片
+    // 暖白美术馆卡纸 + 双层材质
     ctx.fillStyle = getBorderFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
-    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.018);
-    // 白色内层卡纸（比照片区域更大一圈）
-    const innerPad = Math.max(6, Math.round(minBorder * 0.35));
-    ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2);
-    // 卡纸柔和阴影（shadow-md 效果）
+    // 底层纸面纹理（较重，模拟 cotton rag）
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.025);
+    // 微弱暖色渐变（模拟灯光照射下纸面的色温变化）
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.12)';
-    ctx.shadowBlur = Math.max(10, Math.round(minBorder * 0.15));
-    ctx.shadowOffsetY = Math.round(ctx.shadowBlur * 0.3);
-    ctx.fillStyle = '#FFFFFF';
+    ctx.globalAlpha = 0.02;
+    const wG = ctx.createRadialGradient(canvasW * 0.4, canvasH * 0.3, 0, canvasW * 0.5, canvasH * 0.5, Math.max(canvasW, canvasH) * 0.7);
+    wG.addColorStop(0, '#FFF8F0');
+    wG.addColorStop(1, 'transparent');
+    ctx.fillStyle = wG;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    ctx.restore();
+    // 白色内层卡纸
+    const innerPad = Math.max(6, Math.round(minBorder * 0.3));
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.08)';
+    ctx.shadowBlur = Math.max(8, Math.round(minBorder * 0.1));
+    ctx.shadowOffsetY = Math.round(ctx.shadowBlur * 0.25);
+    ctx.fillStyle = '#FEFEFE';
     ctx.fillRect(drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2);
     ctx.restore();
-    // 极微弱边框线 (#D7D4CD 20% opacity)
-    ctx.save();
-    ctx.strokeStyle = 'rgba(215,212,205,0.2)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2);
-    ctx.restore();
+    // 内层纸面纹理
+    applyGrain(ctx, drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2, 0.018);
+    // 照片开窗斜切阴影
+    const bevelDepth = Math.max(3, Math.round(innerPad * 0.1));
+    drawMatBevel(drawX, drawY, drawnW, drawnH, bevelDepth, 0.08);
 
   } else if (ft === 'editorial') {
-    // 设计稿结构: #2A2A2A 外底(p-2) → #1A1A1A 内底(border 0.5px #474747) → 照片
+    // 深灰双色调 + 光影分层（无线框）
     ctx.fillStyle = '#2A2A2A';
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 内层深色面板
-    const innerPad = Math.max(1, Math.round(minBorder * 0.15));
+    // 内层深色面板（通过色调差异创建边界，不用线）
+    const innerPad = Math.max(1, Math.round(minBorder * 0.12));
     ctx.fillStyle = '#1A1A1A';
     ctx.fillRect(innerPad, innerPad, canvasW - innerPad * 2, canvasH - innerPad * 2);
-    // 极细定义线 (0.5px #474747)
+    // 照片开窗处的微弱光影边界（替代 0.5px 硬线）
     ctx.save();
-    ctx.strokeStyle = '#474747';
-    ctx.lineWidth = 0.5;
-    ctx.strokeRect(drawX - 0.25, drawY - 0.25, drawnW + 0.5, drawnH + 0.5);
+    const edgeDepth = Math.max(2, Math.round(minBorder * 0.04));
+    const eG = ctx.createLinearGradient(drawX, drawY - edgeDepth, drawX, drawY);
+    eG.addColorStop(0, 'rgba(255,255,255,0.04)');
+    eG.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = eG;
+    ctx.fillRect(drawX, drawY - edgeDepth, drawnW, edgeDepth);
     ctx.restore();
 
   } else if (ft === 'floating') {
-    // 设计稿结构: #0E0E0E 深色底 → 大面积 blur 阴影 → 白色极细边(p-1) → 照片
+    // 深色画布 + 悬浮大面积弥散阴影 + 白色薄层承载
     ctx.fillStyle = '#0E0E0E';
     ctx.fillRect(0, 0, canvasW, canvasH);
-    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.015);
-    // 大面积弥散阴影 (blur-3xl, scale-95, translate-y-8, opacity-60)
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.018);
+    // 大面积弥散阴影 (模拟悬浮感)
     ctx.save();
-    const shadowScale = 0.95;
-    const shadowOffY = Math.round(Math.min(drawnW, drawnH) * 0.06);
+    const shadowScale = 0.94;
+    const shadowOffY = Math.round(Math.min(drawnW, drawnH) * 0.065);
     const sW = drawnW * shadowScale, sH = drawnH * shadowScale;
     const sX = drawX + (drawnW - sW) / 2, sY = drawY + (drawnH - sH) / 2 + shadowOffY;
-    ctx.shadowColor = 'rgba(0,0,0,0.60)';
-    ctx.shadowBlur = Math.max(30, Math.round(Math.min(drawnW, drawnH) * 0.15));
-    ctx.fillStyle = 'rgba(0,0,0,0.40)';
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = Math.max(40, Math.round(Math.min(drawnW, drawnH) * 0.18));
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
     ctx.fillRect(sX, sY, sW, sH);
     ctx.restore();
-    // 白色极薄边框 (p-1)
-    const framePad = Math.max(1, Math.round(Math.min(drawnW, drawnH) * 0.005));
+    // 白色承载面（不是线框，是一个薄层面）
+    const framePad = Math.max(2, Math.round(Math.min(drawnW, drawnH) * 0.008));
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(drawX - framePad, drawY - framePad, drawnW + framePad * 2, drawnH + framePad * 2);
+    // 白色面上的极微弱纹理
+    applyGrain(ctx, drawX - framePad, drawY - framePad, drawnW + framePad * 2, drawnH + framePad * 2, 0.01);
 
   } else if (ft === 'soft-ivory') {
-    // 设计稿结构: #FAF9F6 底(p-12) → 白色卡纸(shadow-sm, p-6) → 照片
+    // 象牙白暖纸 + 内层卡纸 + 柔和过渡
     ctx.fillStyle = getBorderFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
-    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.02);
-    // 白色内层卡纸
-    const innerPad = Math.max(4, Math.round(minBorder * 0.25));
+    // 暖色纸面纹理
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.03);
+    // 微弱暖色径向渐变（模拟自然光温差）
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.06)';
-    ctx.shadowBlur = Math.max(4, Math.round(minBorder * 0.06));
+    ctx.globalAlpha = 0.025;
+    const ivG = ctx.createRadialGradient(canvasW * 0.45, canvasH * 0.4, 0, canvasW * 0.5, canvasH * 0.5, Math.max(canvasW, canvasH) * 0.65);
+    ivG.addColorStop(0, '#F0E0C8');
+    ivG.addColorStop(1, 'transparent');
+    ctx.fillStyle = ivG;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    ctx.restore();
+    // 白色承载卡纸
+    const innerPad = Math.max(5, Math.round(minBorder * 0.22));
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.04)';
+    ctx.shadowBlur = Math.max(3, Math.round(minBorder * 0.04));
     ctx.shadowOffsetY = 1;
-    ctx.fillStyle = '#FFFFFF';
+    ctx.fillStyle = '#FFFEFA';
     ctx.fillRect(drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2);
     ctx.restore();
+    applyGrain(ctx, drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2, 0.015);
+    // 柔和斜切过渡
+    const bevelDepth = Math.max(2, Math.round(innerPad * 0.08));
+    drawMatBevel(drawX, drawY, drawnW, drawnH, bevelDepth, 0.05);
 
   } else if (ft === 'darkroom') {
-    // 设计稿结构: #111 底(p-12) → 纯黑卡纸(border white/10, p-1) → 颗粒叠加 → 照片(contrast grayscale)
+    // 暗房黑底 + 纯黑内裱 + 银盐质感
     ctx.fillStyle = '#111111';
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 纯黑卡纸层
-    const matPad = Math.max(1, Math.round(Math.min(drawnW, drawnH) * 0.006));
-    ctx.fillStyle = '#000000';
+    // 暗房墙面纹理
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.02);
+    // 纯黑内裱层（用面而不是线来定义）
+    const matPad = Math.max(2, Math.round(Math.min(drawnW, drawnH) * 0.01));
+    ctx.fillStyle = '#050505';
     ctx.fillRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2);
-    // 极细白色边框 (border-white/10)
+    // 边缘氧化效果（银盐纸的老化边缘光泽）
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(drawX - matPad - 0.5, drawY - matPad - 0.5, drawnW + matPad * 2 + 1, drawnH + matPad * 2 + 1);
+    ctx.globalAlpha = 0.06;
+    const oxG = ctx.createLinearGradient(drawX - matPad, drawY - matPad, drawX - matPad + matPad * 3, drawY - matPad);
+    oxG.addColorStop(0, '#C8C0B4');
+    oxG.addColorStop(1, 'transparent');
+    ctx.fillStyle = oxG;
+    ctx.fillRect(drawX - matPad, drawY - matPad, matPad * 3, drawnH + matPad * 2);
+    ctx.restore();
+    // 卡纸边缘微弱光晕（替代白色 stroke 线）
+    ctx.save();
+    ctx.globalAlpha = 0.03;
+    ctx.shadowColor = 'rgba(255,255,255,0.8)';
+    ctx.shadowBlur = 2;
+    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+    ctx.fillRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2);
     ctx.restore();
 
   } else if (ft === 'thin-archive') {
-    // 设计稿结构: 深色底 → 仅 1px white/20 边框线 → 照片（无卡纸，无padding）
+    // 深色画布 + 极微弱光影边界（无硬线）
     ctx.fillStyle = '#0E0E0E';
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 极细白色定义线
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.012);
+    // 照片边缘的微弱光影过渡（替代 1px stroke）
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.20)';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(drawX - 0.5, drawY - 0.5, drawnW + 1, drawnH + 1);
+    const archiveGlow = Math.max(1, Math.round(Math.min(drawnW, drawnH) * 0.003));
+    ctx.shadowColor = 'rgba(255,255,255,0.12)';
+    ctx.shadowBlur = archiveGlow;
+    ctx.fillStyle = 'rgba(255,255,255,0.015)';
+    ctx.fillRect(drawX - 1, drawY - 1, drawnW + 2, drawnH + 2);
     ctx.restore();
 
   } else if (ft === 'shadow-mat') {
-    // 设计稿结构: #F0F0F0 外层(shadow-inner, p-12) → #E8E8E8 内层(heavy inset shadow, p-8) → 白色底座(shadow-2xl) → 照片
+    // 三层物理嵌套：外层纸面 → 凹槽卡纸 → 白色底座
     ctx.fillStyle = '#F0F0F0';
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 外层微弱 shadow-inner
+    // 外层纸面纹理
+    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.02);
+    // 外层微弱光影（模拟整体内凹感）
     ctx.save();
-    const outerShadow = Math.max(6, Math.round(minBorder * 0.08));
-    const osGrad = ctx.createLinearGradient(0, 0, 0, outerShadow);
-    osGrad.addColorStop(0, 'rgba(0,0,0,0.05)');
-    osGrad.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = osGrad;
-    ctx.fillRect(0, 0, canvasW, outerShadow);
+    const outerDepth = Math.max(8, Math.round(minBorder * 0.1));
+    const oG = ctx.createLinearGradient(0, 0, 0, outerDepth);
+    oG.addColorStop(0, 'rgba(0,0,0,0.04)');
+    oG.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = oG;
+    ctx.fillRect(0, 0, canvasW, outerDepth);
     ctx.restore();
-    // 中间 #E8E8E8 卡纸层（介于外层和照片之间）
-    const matPad = Math.max(6, Math.round(minBorder * 0.45));
-    ctx.fillStyle = '#E8E8E8';
+    // 中间凹槽卡纸层
+    const matPad = Math.max(8, Math.round(minBorder * 0.4));
+    ctx.fillStyle = '#E6E4E0';
     ctx.fillRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2);
-    // 重度内凹阴影 (inset_0_10px_20px_rgba(0,0,0,0.2))
+    // 凹槽纸面纹理
+    applyGrain(ctx, drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2, 0.022);
+    // 重度内凹阴影（模拟真实裱框凹槽）
+    const insetDepth = Math.max(10, Math.round(matPad * 0.55));
+    drawMatBevel(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2, insetDepth, 0.18);
+    // 白色底座（照片直接坐在上面）
+    const basePad = Math.max(2, Math.round(matPad * 0.12));
     ctx.save();
-    const insetDepth = Math.max(8, Math.round(matPad * 0.6));
-    const isTop = ctx.createLinearGradient(drawX - matPad, drawY - matPad, drawX - matPad, drawY - matPad + insetDepth);
-    isTop.addColorStop(0, 'rgba(0,0,0,0.20)');
-    isTop.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = isTop;
-    ctx.fillRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, insetDepth);
-    const isLeft = ctx.createLinearGradient(drawX - matPad, drawY - matPad, drawX - matPad + insetDepth * 0.7, drawY - matPad);
-    isLeft.addColorStop(0, 'rgba(0,0,0,0.12)');
-    isLeft.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = isLeft;
-    ctx.fillRect(drawX - matPad, drawY - matPad, insetDepth * 0.7, drawnH + matPad * 2);
-    ctx.restore();
-    // 白色底座 (shadow-2xl)
-    const basePad = Math.max(2, Math.round(matPad * 0.15));
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.18)';
-    ctx.shadowBlur = Math.max(12, Math.round(matPad * 0.5));
-    ctx.shadowOffsetY = Math.round(ctx.shadowBlur * 0.2);
-    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = 'rgba(0,0,0,0.14)';
+    ctx.shadowBlur = Math.max(10, Math.round(matPad * 0.4));
+    ctx.shadowOffsetY = Math.round(ctx.shadowBlur * 0.15);
+    ctx.fillStyle = '#FDFDFD';
     ctx.fillRect(drawX - basePad, drawY - basePad, drawnW + basePad * 2, drawnH + basePad * 2);
     ctx.restore();
-    applyGrain(ctx, 0, 0, canvasW, canvasH, 0.015);
+    // 底座纹理
+    applyGrain(ctx, drawX - basePad, drawY - basePad, drawnW + basePad * 2, drawnH + basePad * 2, 0.01);
 
   }
 
@@ -948,20 +1011,23 @@ function computeDims(item) {
   const cfg = item.config;
   const base = Math.round(Math.min(img.width, img.height) * cfg.frameWidth / 100);
 
-  // 每种预设的边框倍率
-  const multipliers = {
-    'gallery-black':  1.6,
-    'museum-white':   1.4,
-    'editorial':      1.0,
-    'floating':       1.2,
-    'soft-ivory':     1.3,
-    'darkroom':       1.5,
-    'thin-archive':   1.0,
-    'shadow-mat':     1.5,
+  // 每种预设的边框比例系数 [上, 右, 下, 左]
+  // 底部加权：经典美术馆挂装比例，底部比上部多 10-15%
+  const ratios = {
+    'gallery-black':  [1.5, 1.6, 1.75, 1.6],   // 大留白，底部更重
+    'museum-white':   [1.4, 1.4, 1.6,  1.4],    // 温和加权
+    'editorial':      [0.8, 0.8, 0.8,  0.8],    // 极薄均匀
+    'floating':       [1.3, 1.3, 1.5,  1.3],    // 悬浮空间
+    'soft-ivory':     [1.2, 1.3, 1.45, 1.3],    // 柔和加权
+    'darkroom':       [1.3, 1.4, 1.55, 1.4],    // 暗房沉稳
+    'thin-archive':   [0.5, 0.5, 0.5,  0.5],    // 极克制
+    'shadow-mat':     [1.4, 1.5, 1.65, 1.5],    // 重裱框
   };
-  const mult = multipliers[cfg.frameType] || 1.0;
-  let bT = Math.round(base * mult);
-  let bR = bT, bB = bT, bL = bT;
+  const r = ratios[cfg.frameType] || [1.0, 1.0, 1.0, 1.0];
+  let bT = Math.round(base * r[0]);
+  let bR = Math.round(base * r[1]);
+  let bB = Math.round(base * r[2]);
+  let bL = Math.round(base * r[3]);
 
   const photoW = img.width;
   const photoH = img.height;
@@ -978,10 +1044,12 @@ function computeDims(item) {
 
   // 动态计算该比例下的边框
   const dynamicBase = Math.round(Math.min(canvasW, canvasH) * cfg.frameWidth / 100);
-  let dbT = Math.round(dynamicBase * mult);
-  let dbR = dbT, dbB = dbT, dbL = dbT;
+  let dbT = Math.round(dynamicBase * r[0]);
+  let dbR = Math.round(dynamicBase * r[1]);
+  let dbB = Math.round(dynamicBase * r[2]);
+  let dbL = Math.round(dynamicBase * r[3]);
 
-  const innerW = Math.max(1, canvasW - dbL - dbR);  // 防止边框过大挤占至 0 或负数
+  const innerW = Math.max(1, canvasW - dbL - dbR);
   const innerH = Math.max(1, canvasH - dbT - dbB);
   const imgAspect = img.width / img.height;
   
