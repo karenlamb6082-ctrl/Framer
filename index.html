@@ -103,66 +103,58 @@
 
     <!-- ===== 面板区域：预设 ===== -->
     <div class="panel-content" id="panelPresets" hidden>
-      <div class="panel-label">边框类型</div>
+      <div class="panel-label">呈现风格</div>
       <div class="frame-grid" id="frameGrid">
-        <button class="frame-item active" data-frame="gallery-black">
-          <div class="frame-thumb frame-thumb--gallery-black"><div class="frame-thumb-inner"></div></div>
-          <span>画廊黑</span>
+        <button class="frame-item active" data-frame="air">
+          <div class="frame-thumb frame-thumb--air"><div class="frame-thumb-inner"></div></div>
+          <span>空气</span>
         </button>
-        <button class="frame-item" data-frame="museum-white">
-          <div class="frame-thumb frame-thumb--museum-white"><div class="frame-thumb-inner"></div></div>
-          <span>美术馆</span>
+        <button class="frame-item" data-frame="soft-paper">
+          <div class="frame-thumb frame-thumb--soft-paper"><div class="frame-thumb-inner"></div></div>
+          <span>柔纸</span>
         </button>
-        <button class="frame-item" data-frame="editorial">
-          <div class="frame-thumb frame-thumb--editorial"><div class="frame-thumb-inner"></div></div>
-          <span>编辑风</span>
+        <button class="frame-item" data-frame="float">
+          <div class="frame-thumb frame-thumb--float"><div class="frame-thumb-inner"></div></div>
+          <span>悬浮</span>
         </button>
-        <button class="frame-item" data-frame="floating">
-          <div class="frame-thumb frame-thumb--floating"><div class="frame-thumb-inner"></div></div>
-          <span>悬浮感</span>
+        <button class="frame-item" data-frame="archive">
+          <div class="frame-thumb frame-thumb--archive"><div class="frame-thumb-inner"></div></div>
+          <span>档案</span>
         </button>
-        <button class="frame-item" data-frame="soft-ivory">
-          <div class="frame-thumb frame-thumb--soft-ivory"><div class="frame-thumb-inner"></div></div>
-          <span>象牙白</span>
+        <button class="frame-item" data-frame="mist">
+          <div class="frame-thumb frame-thumb--mist"><div class="frame-thumb-inner"></div></div>
+          <span>迷雾</span>
         </button>
-        <button class="frame-item" data-frame="darkroom">
-          <div class="frame-thumb frame-thumb--darkroom"><div class="frame-thumb-inner"></div></div>
-          <span>暗房裱</span>
-        </button>
-        <button class="frame-item" data-frame="thin-archive">
-          <div class="frame-thumb frame-thumb--thin-archive"><div class="frame-thumb-inner"></div></div>
-          <span>档案线</span>
-        </button>
-        <button class="frame-item" data-frame="shadow-mat">
-          <div class="frame-thumb frame-thumb--shadow-mat"><div class="frame-thumb-inner"></div></div>
-          <span>阴影裱</span>
+        <button class="frame-item" data-frame="ink-space">
+          <div class="frame-thumb frame-thumb--ink-space"><div class="frame-thumb-inner"></div></div>
+          <span>墨空间</span>
         </button>
       </div>
 
-      <div class="panel-label">边框宽度</div>
+      <div class="panel-label">留白程度</div>
       <div class="slider-row">
-        <span class="slider-label">细</span>
-        <input type="range" class="slider" id="frameWidth" min="0" max="85" value="6">
-        <span class="slider-val" id="widthVal">6%</span>
-        <span class="slider-label">粗</span>
+        <span class="slider-label">紧凑</span>
+        <input type="range" class="slider" id="frameWidth" min="0" max="85" value="18">
+        <span class="slider-val" id="widthVal">18%</span>
+        <span class="slider-label">舒展</span>
       </div>
 
-      <div class="panel-label">边框颜色</div>
+      <div class="panel-label">背景色调</div>
       <div class="color-row">
-        <div class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></div>
-        <div class="color-swatch" style="background:#f5f0e8" data-color="#f5f0e8"></div>
-        <div class="color-swatch" style="background:#c8a96e" data-color="#c8a96e"></div>
-        <div class="color-swatch" style="background:#8fb2c9" data-color="#8fb2c9"></div>
-        <div class="color-swatch" style="background:#e89abe" data-color="#e89abe"></div>
-        <div class="color-swatch" style="background:#1a1a1a" data-color="#1a1a1a"></div>
-        <input type="color" class="color-custom" id="customColor" value="#ffffff">
+        <div class="color-swatch active" style="background:#f9f9f7" data-color="#f9f9f7"></div>
+        <div class="color-swatch" style="background:#f2f4f2" data-color="#f2f4f2"></div>
+        <div class="color-swatch" style="background:#ecefec" data-color="#ecefec"></div>
+        <div class="color-swatch" style="background:#e5e9e6" data-color="#e5e9e6"></div>
+        <div class="color-swatch" style="background:#dee4e0" data-color="#dee4e0"></div>
+        <div class="color-swatch" style="background:#2d3432" data-color="#2d3432"></div>
+        <input type="color" class="color-custom" id="customColor" value="#f9f9f7">
       </div>
 
       <div class="gradient-row" id="gradientRow">
         <button class="btn-toggle" id="gradientToggle">渐变</button>
         <div class="gradient-color2" id="gradientColor2Wrap" hidden>
           <span class="slider-label">第二色</span>
-          <input type="color" class="color-custom" id="gradientColor2" value="#f5f0e8">
+          <input type="color" class="color-custom" id="gradientColor2" value="#f2f4f2">
         </div>
       </div>
     </div>

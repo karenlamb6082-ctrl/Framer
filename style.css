@@ -293,7 +293,7 @@ body {
 ================================ */
 .frame-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 6px;
 }
 .frame-item {
@@ -327,100 +327,73 @@ body {
 }
 .frame-thumb-inner { width: 100%; height: 100%; }
 
-/* 8种预设缩略图 — 与设计稿精确匹配 */
-.frame-thumb--gallery-black {
-  background: #050505; padding: 4px;
+/* 6种呈现预设缩略图 */
+.frame-thumb--air {
+  background: #f9f9f7; padding: 8px;
 }
-.frame-thumb--gallery-black .frame-thumb-inner {
-  background: #F4F4F4; display: flex; align-items: center; justify-content: center;
+.frame-thumb--air .frame-thumb-inner {
+  display: flex; align-items: center; justify-content: center;
 }
-.frame-thumb--gallery-black .frame-thumb-inner::after {
-  content: ''; display: block; width: 60%; height: 60%;
+.frame-thumb--air .frame-thumb-inner::after {
+  content: ''; display: block; width: 50%; height: 55%;
+  background: linear-gradient(135deg, #999, #777);
+}
+
+.frame-thumb--soft-paper {
+  background: #f2f4f2; padding: 4px;
+}
+.frame-thumb--soft-paper .frame-thumb-inner {
+  background: #f9f9f7; padding: 3px;
+  box-shadow: 0 1px 4px rgba(45,52,50,0.04);
+  display: flex; align-items: center; justify-content: center;
+}
+.frame-thumb--soft-paper .frame-thumb-inner::after {
+  content: ''; display: block; width: 80%; height: 80%;
+  background: linear-gradient(135deg, #a08060, #705030);
+}
+
+.frame-thumb--float {
+  background: #ecefec; padding: 5px;
+}
+.frame-thumb--float .frame-thumb-inner {
+  display: flex; align-items: center; justify-content: center;
+}
+.frame-thumb--float .frame-thumb-inner::after {
+  content: ''; display: block; width: 65%; height: 65%;
   background: linear-gradient(135deg, #888, #555);
+  box-shadow: 0 4px 8px rgba(45,52,50,0.12);
 }
 
-.frame-thumb--museum-white {
-  background: #E5E2DB; padding: 4px;
+.frame-thumb--archive {
+  background: #f9f9f7; padding: 3px 4px 8px;
 }
-.frame-thumb--museum-white .frame-thumb-inner {
-  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+.frame-thumb--archive .frame-thumb-inner {
+  background: #e5e9e6; padding: 1px;
+  display: flex; align-items: flex-start; justify-content: center;
+}
+.frame-thumb--archive .frame-thumb-inner::after {
+  content: ''; display: block; width: 100%; height: 60%;
+  background: linear-gradient(135deg, #666, #444);
+}
+
+.frame-thumb--mist {
+  background: #f2f4f2; padding: 3px;
+}
+.frame-thumb--mist .frame-thumb-inner {
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle, rgba(120,100,140,0.45) 25%, transparent 65%);
+}
+
+.frame-thumb--ink-space {
+  background: #2d3432; padding: 5px;
+}
+.frame-thumb--ink-space .frame-thumb-inner {
   display: flex; align-items: center; justify-content: center;
 }
-.frame-thumb--museum-white .frame-thumb-inner::after {
-  content: ''; display: block; width: 70%; height: 70%;
-  background: linear-gradient(135deg, #999, #666);
-}
-
-.frame-thumb--editorial {
-  background: #2A2A2A; padding: 2px;
-}
-.frame-thumb--editorial .frame-thumb-inner {
-  background: #1A1A1A; border: 0.5px solid #474747;
-  display: flex; align-items: center; justify-content: center;
-}
-.frame-thumb--editorial .frame-thumb-inner::after {
-  content: ''; display: block; width: 92%; height: 92%;
-  background: linear-gradient(135deg, #777, #444);
-}
-
-.frame-thumb--floating {
-  background: #0E0E0E; padding: 5px;
-  position: relative;
-}
-.frame-thumb--floating .frame-thumb-inner {
-  background: #fff; padding: 1px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-  display: flex; align-items: center; justify-content: center;
-}
-.frame-thumb--floating .frame-thumb-inner::after {
-  content: ''; display: block; width: 100%; height: 100%;
-  background: linear-gradient(135deg, #aaa, #777);
-}
-
-.frame-thumb--soft-ivory {
-  background: #FAF9F6; padding: 3px;
-}
-.frame-thumb--soft-ivory .frame-thumb-inner {
-  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  display: flex; align-items: center; justify-content: center;
-}
-.frame-thumb--soft-ivory .frame-thumb-inner::after {
-  content: ''; display: block; width: 75%; height: 75%;
-  background: linear-gradient(135deg, #b0a090, #887060);
-}
-
-.frame-thumb--darkroom {
-  background: #111; padding: 3px;
-}
-.frame-thumb--darkroom .frame-thumb-inner {
-  background: #000; border: 1px solid rgba(255,255,255,0.1);
-  display: flex; align-items: center; justify-content: center;
-}
-.frame-thumb--darkroom .frame-thumb-inner::after {
-  content: ''; display: block; width: 85%; height: 80%;
-  background: linear-gradient(135deg, #555, #222);
-}
-
-.frame-thumb--thin-archive {
-  background: #0E0E0E; padding: 0;
-}
-.frame-thumb--thin-archive .frame-thumb-inner {
-  border: 1px solid rgba(255,255,255,0.2);
-  background: linear-gradient(135deg, #777, #444);
-}
-
-.frame-thumb--shadow-mat {
-  background: #F0F0F0; padding: 3px;
-  position: relative;
-}
-.frame-thumb--shadow-mat .frame-thumb-inner {
-  background: #E8E8E8;
-  box-shadow: inset 0 3px 6px rgba(0,0,0,0.15);
-  display: flex; align-items: center; justify-content: center;
-}
-.frame-thumb--shadow-mat .frame-thumb-inner::after {
-  content: ''; display: block; width: 65%; height: 60%;
-  background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+.frame-thumb--ink-space .frame-thumb-inner::after {
+  content: ''; display: block; width: 60%; height: 60%;
+  background: linear-gradient(135deg, #777, #555);
+  box-shadow: 0 0 6px rgba(255,255,255,0.06);
 }
 
 /* ================================
@@ -646,8 +619,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--surface);
+  background: #0a0a0a;
   overflow: hidden;
+  /* 微弱内凹光边，与侧边栏/顶栏分离 */
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
 }
 
 /* 空状态 */

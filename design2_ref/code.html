@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface": "#f9f9f7",
+                    "outline": "#767c79",
+                    "surface-bright": "#f9f9f7",
+                    "surface-container-low": "#f2f4f2",
+                    "primary": "#5f5e5e",
+                    "surface-dim": "#d4dcd8",
+                    "on-tertiary-fixed-variant": "#656762",
+                    "primary-container": "#e4e2e1",
+                    "on-tertiary-container": "#5b5c58",
+                    "surface-tint": "#5f5e5e",
+                    "background": "#f9f9f7",
+                    "primary-fixed-dim": "#d6d4d3",
+                    "outline-variant": "#adb3b0",
+                    "on-secondary-fixed-variant": "#5b5c57",
+                    "on-error-container": "#742410",
+                    "secondary-dim": "#53534f",
+                    "inverse-on-surface": "#9c9d9b",
+                    "on-primary-fixed-variant": "#5c5b5b",
+                    "secondary-fixed-dim": "#d6d4ce",
+                    "inverse-primary": "#ffffff",
+                    "on-primary-fixed": "#3f3f3f",
+                    "tertiary": "#5e605b",
+                    "on-surface": "#2d3432",
+                    "error-dim": "#5c1202",
+                    "on-error": "#fff7f6",
+                    "tertiary-fixed-dim": "#e6e6df",
+                    "error-container": "#fe8b70",
+                    "tertiary-container": "#f4f4ed",
+                    "primary-fixed": "#e4e2e1",
+                    "surface-container-lowest": "#ffffff",
+                    "on-surface-variant": "#5a605e",
+                    "on-tertiary": "#faf9f3",
+                    "tertiary-dim": "#52544f",
+                    "inverse-surface": "#0c0f0e",
+                    "on-background": "#2d3432",
+                    "primary-dim": "#535252",
+                    "secondary": "#5f5f5b",
+                    "on-primary": "#faf7f6",
+                    "secondary-container": "#e4e2dc",
+                    "on-tertiary-fixed": "#494a46",
+                    "on-primary-container": "#525251",
+                    "on-secondary": "#faf9f3",
+                    "surface-variant": "#dee4e0",
+                    "surface-container-highest": "#dee4e0",
+                    "on-secondary-container": "#52524e",
+                    "secondary-fixed": "#e4e2dc",
+                    "surface-container": "#ecefec",
+                    "surface-container-high": "#e5e9e6",
+                    "tertiary-fixed": "#f4f4ed",
+                    "error": "#9e422c",
+                    "on-secondary-fixed": "#3f403b"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.125rem",
+                    "lg": "0.25rem",
+                    "xl": "0.5rem",
+                    "full": "0.75rem"
+            },
+            "fontFamily": {
+                    "headline": ["Manrope"],
+                    "body": ["Manrope"],
+                    "label": ["Manrope"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Manrope', sans-serif; }
+        .mask-mist {
+            mask-image: radial-gradient(circle, black 60%, transparent 100%);
+            -webkit-mask-image: radial-gradient(circle, black 60%, transparent 100%);
+        }
+        .grain-texture {
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface selection:bg-primary-container min-h-screen">
+<!-- TopAppBar from Shared Components JSON -->
+<header class="fixed top-0 w-full z-50 bg-[#f9f9f7]/70 backdrop-blur-xl flex justify-between items-center px-12 py-6 w-full">
+<div class="flex items-center gap-4 text-[#5f5e5e] transition-opacity duration-300 hover:opacity-60 cursor-pointer">
+<span class="material-symbols-outlined">menu</span>
+</div>
+<h1 class="text-xl font-extralight tracking-widest text-[#2d3432]">Curator</h1>
+<div class="flex items-center gap-4 text-[#5f5e5e] transition-opacity duration-300 hover:opacity-60 cursor-pointer">
+<span class="material-symbols-outlined">share</span>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-32 pb-40 px-6 md:px-24 max-w-7xl mx-auto">
+<!-- Header Section -->
+<section class="mb-24 flex flex-col items-center text-center">
+<span class="font-label font-semibold uppercase tracking-[0.1em] text-[0.65rem] text-on-surface-variant mb-4">Library</span>
+<h2 class="font-headline text-5xl md:text-7xl font-extralight tracking-[0.05em] text-on-surface mb-6">Spatial Logic</h2>
+<p class="font-body text-on-surface-variant max-w-md leading-relaxed opacity-80">Six curated presentation archetypes for modern digital curation. Exploring the tension between light and geometry.</p>
+</section>
+<!-- Bento-style Asymmetric Grid for Presets -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 items-stretch">
+<!-- 1. Air (Massive negative space) -->
+<div class="lg:col-span-7 flex flex-col justify-center items-center bg-surface p-12 md:p-24 group">
+<div class="w-full aspect-[4/5] bg-surface-container-low transition-colors duration-500 flex items-center justify-center p-20">
+<img class="w-full h-full object-cover grayscale opacity-90 transition-opacity duration-500 group-hover:opacity-100 group-hover:grayscale-0" data-alt="abstract expressionist painting with sweeping brushstrokes of cerulean blue and titanium white on raw canvas texture with soft light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRCc_sE-l1mEz2yR2Vi4ErhHP0FRfkaYxQZuFcoSkxbLPRWOxPHdKWk-tALnanMC_vcMUn3ojRz37sTYJC_63gt-gwfXEpRx6zIjps3mrambAWZgC8BPIF4vF0LGZYS5pYxcQFg89mYVTZieWX2nXRNrJShzK38Wf3BHEh8M4P4NR9wD2qsh8WIfyCIHzGT1W-Wtd3SSeKhUEF1ephkVIRPxJq__Z2LVT0vk10EUIl0TMkkMkss1DL9-93uO6mdouE2jpiep3rPyHK"/>
+</div>
+<div class="mt-8 text-center">
+<h3 class="font-headline font-light text-xl tracking-wide uppercase">Air</h3>
+<p class="font-label text-[0.65rem] tracking-[0.1em] text-outline mt-2">PRESET 01 — ZERO BOUNDARY</p>
+</div>
+</div>
+<!-- 2. Soft Paper (Textured, off-white) -->
+<div class="lg:col-span-5 relative flex flex-col justify-end bg-surface-container-low p-12 group">
+<div class="absolute inset-0 grain-texture pointer-events-none"></div>
+<div class="relative bg-surface p-8 shadow-sm transition-transform duration-500 group-hover:-translate-y-2">
+<img class="w-full aspect-square object-cover opacity-80 group-hover:opacity-100 transition-opacity" data-alt="botanical illustration of delicate wild flowers in faded watercolor style on aged archival paper background with natural grain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMkjvIS9vvdU5bDLzRl6C8qu8hiv-4CY-3pPzanKVBbeZ-P5cWreKEZwVLCpGZnPlH5SWK0PWXquBTahIy-kRL63n7h634n0YcmPpIdnvKhPqkroFPQRL7DB1FlYxwfreO9c3sftE6r14bTdxL1Fkxy-PwrWImudIpMm24XgHuvjA5GdM4gcIoRdLE8S6aT0WTEeG9IEVDDAa7dMpagXCorcvLmh7qokWJRpv3DxxAU2sC1fB03wwDqpFWmNqXG0K7geQ5OMrqPZ4_"/>
+<div class="mt-6 flex justify-between items-baseline border-t border-outline-variant/10 pt-4">
+<h3 class="font-headline font-light text-lg">Soft Paper</h3>
+<span class="font-label text-[0.6rem] text-outline">PULP &amp; ORGANIC</span>
+</div>
+</div>
+</div>
+<!-- 3. Float (Soft shadow) -->
+<div class="lg:col-span-5 bg-surface-container flex flex-col items-center justify-center p-16 group">
+<div class="relative w-4/5 aspect-square bg-surface-container-lowest shadow-[0_30px_60px_-15px_rgba(45,52,50,0.08)] transition-all duration-500 group-hover:shadow-[0_45px_80px_-20px_rgba(45,52,50,0.12)] group-hover:scale-105">
+<img class="w-full h-full object-cover" data-alt="minimalist architectural photo of a white concrete staircase with sharp linear shadows in bright morning sunlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD435pu_7VjsuHS8FuAS7e2-VgHJSqhwVLHYKWlKeCswtgzFJD6u8JASjuUltAt7k7TjvYDxdyB3nJ8bBrIRx565MKS6j_QrT6Q7XGQwVZJKBEpc9jjgPxFE-Hb74gQTDS_Cz6un3i-oqsp5KK5h9HCFofZZihNL3j0be3HxPBLs7r04MA_0qtaZECECI31lSsyI8o_1gNPeD50QHjRT6Zp4DWbCDIKcJ5sZSIU9c1Qa9ikZpbQfQR1QIbns6Ieb_Yurhy37g8UmNyl"/>
+</div>
+<div class="mt-10 text-center">
+<h3 class="font-headline font-light text-xl tracking-tight">Float</h3>
+<p class="font-body text-sm text-on-surface-variant italic mt-1">Hovering over the void.</p>
+</div>
+</div>
+<!-- 4. Archive (Rational, offset) -->
+<div class="lg:col-span-7 bg-surface p-12 md:p-20 flex flex-col md:flex-row gap-12 items-start justify-center group">
+<div class="w-full md:w-3/5">
+<div class="bg-surface-container-high p-1">
+<img class="w-full aspect-video object-cover transition-all duration-700 grayscale group-hover:grayscale-0" data-alt="monochrome photography of a solitary tree in a vast foggy landscape with high contrast and grain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8A81uKAQam6V93kcuW5GD1jOE0InVtifoaKxmlwJOEkxpuayHtUbMyQ4PLxbSlSCZK2uWdwhzRne_5GtvWghiotQ9pqpxND_0tj8VDl97wwMP_avtgz5t37emfcG49cxZ57xTFluQhf0XkFkdZLh04SiQDXOSSDbiYBFW-Wq4Dczptbd9Y7DHIsq6Oqjr5szJW7eGXea3SQQaBxyKz6awrbD0nhHqj_EMeYewCy0E6FLK9c2DnZ7qXownIjpLU8b8dHLyiDPLW6_u"/>
+</div>
+<div class="mt-4 flex flex-col items-start">
+<span class="font-label text-[0.6rem] tracking-widest text-outline">EDITION 01/24</span>
+<h3 class="font-headline font-light text-lg mt-1">Archive</h3>
+</div>
+</div>
+<div class="md:w-1/4 pt-12">
+<p class="font-body text-[0.8rem] leading-loose text-on-surface-variant opacity-60">
+                        A rigorous systematic approach where content is anchored by metadata. Precise, clinical, permanent.
+                    </p>
+</div>
+</div>
+<!-- 5. Mist (Vignetted, atmospheric) -->
+<div class="lg:col-span-6 bg-surface-container-low min-h-[500px] flex items-center justify-center p-12 group overflow-hidden">
+<div class="relative w-full max-w-md">
+<div class="absolute inset-0 bg-surface-container-low/40 blur-3xl rounded-full scale-150"></div>
+<div class="mask-mist relative">
+<img class="w-full aspect-square object-cover transition-transform duration-1000 group-hover:scale-110" data-alt="dreamy coastal landscape at dawn with soft pastel pink sky and gentle waves fading into morning mist" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB03kvvZhNFHxvArhlZ4K3vx8qx5tLX7kWdGcLKx7nrlH-UXG1uR5F4eBCiGvaE59hLRrHRKg6tDao-QZDZ6i5uKFbrzpm52g86TgZaitx06sZhAB53zKa86NdZT8DzInt1c4W-awcpFARQRxw1TT_z_vjXqg4hsekjLsxrXd8-Z3arMi_6cOafrYRQhd5FMsczXTP-hQzswGycqvaztRjn0HjFGB-31-GmnPOFLKx9nXv1EfuEZVRRqHr5olxqXb3NKts5YjalgWdH"/>
+</div>
+<div class="absolute -bottom-10 left-1/2 -translate-x-1/2 whitespace-nowrap">
+<h3 class="font-headline font-light text-2xl tracking-[0.2em] uppercase opacity-40 group-hover:opacity-100 transition-opacity duration-700">Mist</h3>
+</div>
+</div>
+</div>
+<!-- 6. Ink Space (Deep charcoal, light separation) -->
+<div class="lg:col-span-6 bg-[#2d3432] p-12 md:p-24 flex flex-col items-center justify-center group overflow-hidden">
+<div class="relative w-full max-w-sm">
+<!-- Subtle inner glow for image -->
+<div class="absolute inset-0 bg-white/5 blur-xl rounded-lg scale-110"></div>
+<div class="relative bg-black/40 p-[1px] rounded-lg">
+<img class="w-full h-auto rounded-sm brightness-75 group-hover:brightness-100 transition-all duration-700" data-alt="dramatic mountain peaks at night with a single bright light source hitting the snow-capped summit against a dark sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCz0V9XkCmgBmqva5YgcbRF4-XxQK5LDb6LpqfTWDaIcBdxsgAlwfL8l4Ps9tW-CjwR2noTy6FJtux9EShoz-vCs-GXpXLQ_xXCN_-xQdVqfdSlBCckPO3xfkkRfX6WpGGSOsU9naS3upFc-ZGcQi3l0dChS7d0W3LoS_InvdrCAeu4BXHBmLQJubB8-zEaJOMat_QZVyrNb4_10hPeVrEt8ZwJbZc-zVjztclbtDw27x_o8jOTQm6JF9M_1y4NTW2a782bMhvscqXL"/>
+</div>
+</div>
+<div class="mt-12 text-center text-surface">
+<h3 class="font-headline font-light text-xl tracking-widest uppercase">Ink Space</h3>
+<p class="font-label text-[0.65rem] tracking-[0.2em] text-outline-variant mt-3">LUMINANCE AS BORDER</p>
+</div>
+</div>
+</div>
+<!-- CTA / Footer Area -->
+<section class="mt-32 border-t border-outline-variant/10 pt-20 flex flex-col items-center">
+<h4 class="font-headline text-3xl font-extralight text-on-surface mb-8">Curate your vision.</h4>
+<button class="bg-primary text-on-primary font-label text-[0.7rem] px-10 py-4 rounded-full tracking-[0.15em] uppercase hover:bg-primary-dim transition-all duration-300">
+                Begin Collection
+            </button>
+</section>
+</main>
+<!-- BottomNavBar from Shared Components JSON -->
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-[#f9f9f7]/70 backdrop-blur-xl flex justify-around items-center px-16 pb-10 pt-6 rounded-t-[2rem] shadow-[0_-4px_40px_rgba(45,52,50,0.04)]">
+<a class="flex flex-col items-center justify-center text-[#5f5e5e]/40 hover:text-[#5f5e5e] transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">filter_b_and_w</span>
+<span class="font-['Manrope'] font-semibold uppercase tracking-[0.1em] text-[0.65rem] mt-1">Gallery</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#2d3432] scale-110 transition-transform" href="#">
+<span class="material-symbols-outlined text-2xl">auto_awesome</span>
+<span class="font-['Manrope'] font-semibold uppercase tracking-[0.1em] text-[0.65rem] mt-1">Presets</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#5f5e5e]/40 hover:text-[#5f5e5e] transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">tune</span>
+<span class="font-['Manrope'] font-semibold uppercase tracking-[0.1em] text-[0.65rem] mt-1">Tuning</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#5f5e5e]/40 hover:text-[#5f5e5e] transition-colors" href="#">
+<span class="material-symbols-outlined text-2xl">settings</span>
+<span class="font-['Manrope'] font-semibold uppercase tracking-[0.1em] text-[0.65rem] mt-1">Settings</span>
+</a>
+</nav>
+</body></html>
