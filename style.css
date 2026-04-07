@@ -456,6 +456,26 @@ body {
 .color-custom::-webkit-color-swatch { border: none; }
 .color-custom::-webkit-color-swatch-wrapper { padding: 0; }
 
+/* 取色器按钮 */
+.btn-eyedropper {
+  width: 20px; height: 20px;
+  background: transparent;
+  border: 1px solid var(--outline-variant);
+  color: var(--on-surface-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: all var(--transition);
+}
+.btn-eyedropper:hover { color: var(--primary); border-color: var(--primary); }
+.btn-eyedropper.on { background: var(--primary); color: var(--on-primary); border-color: var(--primary); }
+.btn-eyedropper .material-symbols-outlined { font-size: 12px; }
+
+/* 取色模式光标 */
+.canvas-wrap.picking canvas { cursor: crosshair !important; }
+
 /* 渐变 */
 .gradient-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
 .gradient-color2 { display: flex; align-items: center; gap: 6px; }

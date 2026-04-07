@@ -15,6 +15,7 @@ const state = {
   redoStack: [],
   exportFormat: 'png',
   exportQuality: 0.92,
+  pickingColor: false,
 };
 
 const MAX_HISTORY = 40;
@@ -109,6 +110,8 @@ const els = {
   grainToggle:    document.getElementById('grainToggle'),
   grainIntensity: document.getElementById('grainIntensity'),
   grainSliderWrap: document.getElementById('grainSliderWrap'),
+  // 取色器
+  btnEyedropper: document.getElementById('btnEyedropper'),
   // 状态栏
   statusText:   document.getElementById('statusText'),
   statusInfo:   document.getElementById('statusInfo'),
@@ -256,6 +259,28 @@ function bindControlEvents() {
     updateActiveConfig({ frameColor: e.target.value });
     syncUI(); scheduleRender();
   };
+
+  // 取色器
+  els.btnEyedropper.onclick = () => {
+    if (!getActiveItem()) return;
+    state.pickingColor = !state.pickingColor;
+    els.canvasWrap.classList.toggle('picking', state.pickingColor);
+    els.btnEyedropper.classList.toggle('on', state.pickingColor);
+  };
+  els.canvas.addEventListener('click', (e) => {
+    if (!state.pickingColor) return;
+    const rect = els.canvas.getBoundingClientRect();
+    const x = Math.round((e.clientX - rect.left) * (els.canvas.width / rect.width));
+    const y = Math.round((e.clientY - rect.top) * (els.canvas.height / rect.height));
+    const pixel = els.ctx.getImageData(x, y, 1, 1).data;
+    const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+    updateActiveConfig({ frameColor: hex });
+    // 退出取色模式
+    state.pickingColor = false;
+    els.canvasWrap.classList.remove('picking');
+    els.btnEyedropper.classList.remove('on');
+    syncUI(); scheduleRender();
+  });
 
   // 效果
   els.shadowToggle.onclick = () => {
@@ -630,7 +655,7 @@ function deleteItem(index) {
 // 拖拽逻辑
 // ================================
 function startDrag(e) {
-
+  if (state.pickingColor) return; // 取色模式下不拖拽
   if (!state.items.length) return;
   const item = getActiveItem();
   state.isDragging = true;
