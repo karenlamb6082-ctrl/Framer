@@ -32,7 +32,7 @@ const PRESET_CONFIGS = {
   'archive':    { bg: '#ffffff', spacing: 14, grainOn: false },
   'mist':       { bg: '#f5f5f5', spacing: 16, grainOn: false },
   'ink-space':  { bg: '#000000', spacing: 12, grainOn: false },
-  'color-card': { bg: '#ffffff', spacing: 45, grainOn: false },
+  'color-card': { bg: '#ffffff', spacing: 50, grainOn: false },
 };
 
 // 默认配置生成器
@@ -721,9 +721,10 @@ function deleteItem(index) {
 // 拖拽逻辑
 // ================================
 function startDrag(e) {
-  if (state.pickingColor) return; // 取色模式下不拖拽
+  if (state.pickingColor) return;
   if (!state.items.length) return;
   const item = getActiveItem();
+  if (item && item.config.frameType === 'color-card') return; // 色卡禁止拖拽
   state.isDragging = true;
   state.drag.x = e.clientX;
   state.drag.y = e.clientY;
@@ -770,10 +771,10 @@ function render() {
   ctx.clearRect(0, 0, canvasW, canvasH);
 
   // ---- 准备照片参数 ----
-  const drawnW = photoW * cfg.photoScale;
-  const drawnH = photoH * cfg.photoScale;
-  const drawX = photoX + (photoW - drawnW) / 2 + cfg.photoOffsetX;
-  const drawY = photoY + (photoH - drawnH) / 2 + cfg.photoOffsetY;
+  const drawnW = (ft === 'color-card') ? photoW : photoW * cfg.photoScale;
+  const drawnH = (ft === 'color-card') ? photoH : photoH * cfg.photoScale;
+  const drawX = (ft === 'color-card') ? photoX : photoX + (photoW - drawnW) / 2 + cfg.photoOffsetX;
+  const drawY = (ft === 'color-card') ? photoY : photoY + (photoH - drawnH) / 2 + cfg.photoOffsetY;
   const pR = Math.min(drawnW, drawnH) / 2 * cfg.cornerRadius / 50;
   const minBorder = Math.min(bT, bR, bB, bL);
 
