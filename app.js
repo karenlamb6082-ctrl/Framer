@@ -58,6 +58,7 @@ const createDefaultConfig = (preset = 'air') => {
     grainIntensity: 5,
     colorCardLayout: 'lr',
     colorCardText: '',
+    colorCardFlip: false,
     dominantColor: null,
   };
 };
@@ -120,6 +121,7 @@ const els = {
   colorCardOptions: document.getElementById('colorCardOptions'),
   ccLayoutLR: document.getElementById('ccLayoutLR'),
   ccLayoutTB: document.getElementById('ccLayoutTB'),
+  ccFlipBtn:  document.getElementById('ccFlipBtn'),
   colorCardText: document.getElementById('colorCardText'),
   // 状态栏
   statusText:   document.getElementById('statusText'),
@@ -268,12 +270,18 @@ function bindControlEvents() {
 
   // 颜色
   els.colorSwatches.forEach(sw => sw.onclick = () => {
-    updateActiveConfig({ frameColor: sw.dataset.color });
+    const updates = { frameColor: sw.dataset.color };
+    const item = getActiveItem();
+    if (item && item.config.frameType === 'color-card') updates.dominantColor = sw.dataset.color;
+    updateActiveConfig(updates);
     els.customColor.value = sw.dataset.color;
     syncUI(); scheduleRender();
   });
   els.customColor.oninput = (e) => {
-    updateActiveConfig({ frameColor: e.target.value });
+    const updates = { frameColor: e.target.value };
+    const item = getActiveItem();
+    if (item && item.config.frameType === 'color-card') updates.dominantColor = e.target.value;
+    updateActiveConfig(updates);
     syncUI(); scheduleRender();
   };
 
@@ -291,13 +299,43 @@ function bindControlEvents() {
     const y = Math.round((e.clientY - rect.top) * (els.canvas.height / rect.height));
     const pixel = els.ctx.getImageData(x, y, 1, 1).data;
     const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(v => v.toString(16).padStart(2, '0')).join('');
-    updateActiveConfig({ frameColor: hex });
+    const updates = { frameColor: hex };
+    const item = getActiveItem();
+    if (item && item.config.frameType === 'color-card') updates.dominantColor = hex;
+    updateActiveConfig(updates);
     // 退出取色模式
     state.pickingColor = false;
     els.canvasWrap.classList.remove('picking');
     els.btnEyedropper.classList.remove('on');
     syncUI(); scheduleRender();
   });
+
+  // 色卡控件
+  if (els.ccLayoutLR) {
+    els.ccLayoutLR.onclick = () => {
+      updateActiveConfig({ colorCardLayout: 'lr' });
+      syncUI(); scheduleRender();
+    };
+  }
+  if (els.ccLayoutTB) {
+    els.ccLayoutTB.onclick = () => {
+      updateActiveConfig({ colorCardLayout: 'tb' });
+      syncUI(); scheduleRender();
+    };
+  }
+  if (els.colorCardText) {
+    els.colorCardText.oninput = (e) => {
+      updateActiveConfig({ colorCardText: e.target.value });
+      scheduleRender();
+    };
+  }
+  if (els.ccFlipBtn) {
+    els.ccFlipBtn.onclick = () => {
+      const item = getActiveItem();
+      if (item) updateActiveConfig({ colorCardFlip: !item.config.colorCardFlip });
+      syncUI(); scheduleRender();
+    };
+  }
 
   // 效果
   els.shadowToggle.onclick = () => {
@@ -614,6 +652,7 @@ function syncUI() {
     if (isCC) {
       els.ccLayoutLR.classList.toggle('active', cfg.colorCardLayout === 'lr');
       els.ccLayoutTB.classList.toggle('active', cfg.colorCardLayout === 'tb');
+      if (els.ccFlipBtn) els.ccFlipBtn.classList.toggle('on', cfg.colorCardFlip);
       els.colorCardText.value = cfg.colorCardText || '';
     }
   }
@@ -840,13 +879,22 @@ function render() {
     // 色卡文字
     const label = cfg.colorCardText || getColorName(dColor);
     const isLR = cfg.colorCardLayout === 'lr';
+    const flip = cfg.colorCardFlip;
     let textX, textY;
     if (isLR) {
-      textX = drawX + drawnW + (canvasW - drawX - drawnW) / 2;
+      if (flip) {
+        textX = drawX / 2;  // 色块在左
+      } else {
+        textX = drawX + drawnW + (canvasW - drawX - drawnW) / 2;  // 色块在右
+      }
       textY = canvasH / 2;
     } else {
       textX = canvasW / 2;
-      textY = drawY / 2;
+      if (flip) {
+        textY = drawY + drawnH + (canvasH - drawY - drawnH) / 2;  // 色块在底
+      } else {
+        textY = drawY / 2;  // 色块在顶
+      }
     }
     // 文字颜色自适应
     const lum = (parseInt(dColor.slice(1,3),16)*0.299 + parseInt(dColor.slice(3,5),16)*0.587 + parseInt(dColor.slice(5,7),16)*0.114);
@@ -981,12 +1029,20 @@ function computeDims(item) {
     const ratio = Math.max(10, cfg.frameWidth) / 100;
     const photoW = img.width;
     const photoH = img.height;
+    const flip = cfg.colorCardFlip;
     if (cfg.colorCardLayout === 'lr') {
       const totalW = Math.round(photoW / (1 - ratio));
-      return { canvasW: totalW, canvasH: photoH, photoX: 0, photoY: 0, photoW, photoH, bT: 0, bB: 0, bL: 0, bR: totalW - photoW };
+      const colorW = totalW - photoW;
+      if (flip) {
+        return { canvasW: totalW, canvasH: photoH, photoX: colorW, photoY: 0, photoW, photoH, bT: 0, bB: 0, bL: colorW, bR: 0 };
+      }
+      return { canvasW: totalW, canvasH: photoH, photoX: 0, photoY: 0, photoW, photoH, bT: 0, bB: 0, bL: 0, bR: colorW };
     } else {
       const totalH = Math.round(photoH / (1 - ratio));
       const colorH = totalH - photoH;
+      if (flip) {
+        return { canvasW: photoW, canvasH: totalH, photoX: 0, photoY: 0, photoW, photoH, bT: 0, bB: colorH, bL: 0, bR: 0 };
+      }
       return { canvasW: photoW, canvasH: totalH, photoX: 0, photoY: colorH, photoW, photoH, bT: colorH, bB: 0, bL: 0, bR: 0 };
     }
   }
