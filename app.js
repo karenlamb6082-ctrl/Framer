@@ -32,6 +32,7 @@ const PRESET_CONFIGS = {
   'archive':    { bg: '#ffffff', spacing: 14, grainOn: false },
   'mist':       { bg: '#f5f5f5', spacing: 16, grainOn: false },
   'ink-space':  { bg: '#000000', spacing: 12, grainOn: false },
+  'color-card': { bg: '#ffffff', spacing: 45, grainOn: false },
 };
 
 // 默认配置生成器
@@ -55,6 +56,9 @@ const createDefaultConfig = (preset = 'air') => {
     photoStrokeColor: 'rgba(0,0,0,0.5)',
     grainOn:      pc.grainOn,
     grainIntensity: 5,
+    colorCardLayout: 'lr',
+    colorCardText: '',
+    dominantColor: null,
   };
 };
 
@@ -112,6 +116,11 @@ const els = {
   grainSliderWrap: document.getElementById('grainSliderWrap'),
   // 取色器
   btnEyedropper: document.getElementById('btnEyedropper'),
+  // 色卡
+  colorCardOptions: document.getElementById('colorCardOptions'),
+  ccLayoutLR: document.getElementById('ccLayoutLR'),
+  ccLayoutTB: document.getElementById('ccLayoutTB'),
+  colorCardText: document.getElementById('colorCardText'),
   // 状态栏
   statusText:   document.getElementById('statusText'),
   statusInfo:   document.getElementById('statusInfo'),
@@ -225,6 +234,14 @@ function bindControlEvents() {
       frameColor: pc.bg,
       frameWidth: pc.spacing,
     });
+    // 色卡预设：自动提取主色
+    if (type === 'color-card') {
+      const item = getActiveItem();
+      if (item) {
+        const dc = extractDominantColor(item.img);
+        updateActiveConfig({ dominantColor: dc, frameColor: dc });
+      }
+    }
     syncUI(); scheduleRender();
   });
 
@@ -590,6 +607,16 @@ function syncUI() {
   els.grainToggle.classList.toggle('on', cfg.grainOn);
   els.grainSliderWrap.classList.toggle('disabled-slider', !cfg.grainOn);
   els.grainIntensity.value = cfg.grainIntensity;
+  // 色卡面板
+  const isCC = cfg.frameType === 'color-card';
+  if (els.colorCardOptions) {
+    els.colorCardOptions.hidden = !isCC;
+    if (isCC) {
+      els.ccLayoutLR.classList.toggle('active', cfg.colorCardLayout === 'lr');
+      els.ccLayoutTB.classList.toggle('active', cfg.colorCardLayout === 'tb');
+      els.colorCardText.value = cfg.colorCardText || '';
+    }
+  }
   // 状态栏
   updateStatusBar();
 }
@@ -805,6 +832,31 @@ function render() {
     roundRectPath(ctx, drawX - glowPad, drawY - glowPad, drawnW + glowPad * 2, drawnH + glowPad * 2, glowRadius);
     ctx.fill();
     ctx.restore();
+  } else if (ft === 'color-card') {
+    // 色卡：主色填充 + 文字标注
+    const dColor = cfg.dominantColor || cfg.frameColor;
+    ctx.fillStyle = dColor;
+    ctx.fillRect(0, 0, canvasW, canvasH);
+    // 色卡文字
+    const label = cfg.colorCardText || getColorName(dColor);
+    const isLR = cfg.colorCardLayout === 'lr';
+    let textX, textY;
+    if (isLR) {
+      textX = drawX + drawnW + (canvasW - drawX - drawnW) / 2;
+      textY = canvasH / 2;
+    } else {
+      textX = canvasW / 2;
+      textY = drawY / 2;
+    }
+    // 文字颜色自适应
+    const lum = (parseInt(dColor.slice(1,3),16)*0.299 + parseInt(dColor.slice(3,5),16)*0.587 + parseInt(dColor.slice(5,7),16)*0.114);
+    ctx.fillStyle = lum > 140 ? 'rgba(0,0,0,0.45)' : 'rgba(255,255,255,0.7)';
+    const fontSize = Math.round(Math.min(canvasW, canvasH) * 0.032);
+    ctx.font = `300 ${fontSize}px 'Manrope', sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.letterSpacing = '0.08em';
+    ctx.fillText(label, textX, textY);
   }
 
   // =========================================
@@ -924,6 +976,21 @@ function computeDims(item) {
   const base = Math.round(Math.min(img.width, img.height) * cfg.frameWidth / 100);
 
   // 每种呈现预设的留白比例 [上, 右, 下, 左]
+  // 色卡预设：完全独立的分割布局
+  if (cfg.frameType === 'color-card') {
+    const ratio = Math.max(10, cfg.frameWidth) / 100;
+    const photoW = img.width;
+    const photoH = img.height;
+    if (cfg.colorCardLayout === 'lr') {
+      const totalW = Math.round(photoW / (1 - ratio));
+      return { canvasW: totalW, canvasH: photoH, photoX: 0, photoY: 0, photoW, photoH, bT: 0, bB: 0, bL: 0, bR: totalW - photoW };
+    } else {
+      const totalH = Math.round(photoH / (1 - ratio));
+      const colorH = totalH - photoH;
+      return { canvasW: photoW, canvasH: totalH, photoX: 0, photoY: colorH, photoW, photoH, bT: colorH, bB: 0, bL: 0, bR: 0 };
+    }
+  }
+
   const ratios = {
     'air':        [1.0, 1.0, 1.0, 1.0],    // 均匀呼吸
     'soft-paper': [1.0, 1.0, 1.15, 1.0],   // 微底部加重
@@ -973,6 +1040,51 @@ function computeDims(item) {
     photoW: finalW, photoH: finalH, 
     bT: dbT, bB: dbB, bL: dbL, bR: dbR 
   };
+}
+
+// ================================
+// 主色提取 & 颜色命名
+// ================================
+function extractDominantColor(img) {
+  const size = 80;
+  const c = document.createElement('canvas');
+  c.width = size; c.height = size;
+  const cx = c.getContext('2d');
+  cx.drawImage(img, 0, 0, size, size);
+  const data = cx.getImageData(0, 0, size, size).data;
+  const bins = {};
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i+1], b = data[i+2];
+    const bright = (r + g + b) / 3;
+    if (bright < 25 || bright > 235) continue;
+    const key = `${Math.floor(r/16)},${Math.floor(g/16)},${Math.floor(b/16)}`;
+    if (!bins[key]) bins[key] = { n: 0, r: 0, g: 0, b: 0 };
+    bins[key].n++; bins[key].r += r; bins[key].g += g; bins[key].b += b;
+  }
+  let best = null, maxN = 0;
+  for (const k in bins) { if (bins[k].n > maxN) { maxN = bins[k].n; best = bins[k]; } }
+  if (!best) return '#9e9e9e';
+  const rr = Math.round(best.r / best.n), gg = Math.round(best.g / best.n), bb = Math.round(best.b / best.n);
+  return '#' + [rr, gg, bb].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+function getColorName(hex) {
+  if (!hex || hex.length < 7) return 'Color';
+  const r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b), l = (max+min)/2, d = max - min;
+  if (d < 0.08) {
+    if (l > 0.85) return 'White'; if (l > 0.6) return 'Silver';
+    if (l > 0.3) return 'Gray'; return 'Black';
+  }
+  let h = 0;
+  if (max === r) h = ((g-b)/d)%6; else if (max === g) h = (b-r)/d+2; else h = (r-g)/d+4;
+  h = Math.round(h * 60); if (h < 0) h += 360;
+  if (d/max < 0.2) { return l > 0.5 ? 'Silver' : 'Gray'; }
+  if (h < 15 || h >= 345) return 'Red'; if (h < 40) return 'Orange';
+  if (h < 65) return 'Yellow'; if (h < 80) return 'Lime';
+  if (h < 160) return 'Green'; if (h < 195) return 'Cyan';
+  if (h < 250) return 'Blue'; if (h < 290) return 'Purple';
+  if (h < 330) return 'Pink'; return 'Red';
 }
 
 // ================================

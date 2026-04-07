@@ -131,6 +131,20 @@
           <div class="frame-thumb frame-thumb--ink-space"><div class="frame-thumb-inner"></div></div>
           <span>墨空间</span>
         </button>
+        <button class="frame-item" data-frame="color-card">
+          <div class="frame-thumb frame-thumb--color-card"><div class="frame-thumb-inner"></div></div>
+          <span>色卡</span>
+        </button>
+      </div>
+
+      <div class="color-card-options" id="colorCardOptions" hidden>
+        <div class="panel-label">色卡布局</div>
+        <div class="effect-modes">
+          <button class="mode-btn active" id="ccLayoutLR">左右</button>
+          <button class="mode-btn" id="ccLayoutTB">上下</button>
+        </div>
+        <div class="panel-label">色卡文字</div>
+        <input type="text" class="cc-text-input" id="colorCardText" placeholder="自动识别色名（如 Sky blue）" maxlength="30">
       </div>
 
       <div class="panel-label">留白程度</div>

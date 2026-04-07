@@ -389,12 +389,37 @@ body {
 }
 .frame-thumb--ink-space .frame-thumb-inner {
   display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 8px rgba(255,255,255,0.04) inset;
 }
-.frame-thumb--ink-space .frame-thumb-inner::after {
-  content: ''; display: block; width: 60%; height: 60%;
-  background: linear-gradient(135deg, #777, #555);
-  box-shadow: 0 0 6px rgba(255,255,255,0.06);
+
+/* 色卡缩略图 */
+.frame-thumb--color-card {
+  background: #7eb89e;
+  padding: 0;
+  display: flex;
+  overflow: hidden;
 }
+.frame-thumb--color-card .frame-thumb-inner {
+  width: 55%; height: 100%;
+  background: linear-gradient(135deg, #667, #445);
+  flex-shrink: 0;
+}
+
+/* 色卡控件 */
+.color-card-options { margin-top: 8px; }
+.cc-text-input {
+  width: 100%;
+  background: var(--surface);
+  color: var(--on-surface);
+  border: 1px solid var(--outline-variant);
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: var(--font);
+  letter-spacing: 0.05em;
+  margin-top: 4px;
+}
+.cc-text-input:focus { outline: none; border-color: var(--primary); }
+.cc-text-input::placeholder { color: var(--on-surface-muted); }
 
 /* ================================
    交互组件
