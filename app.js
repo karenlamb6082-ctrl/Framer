@@ -108,6 +108,12 @@ const els = {
   cpH: document.getElementById('cpH'),
   cpS: document.getElementById('cpS'),
   cpV: document.getElementById('cpV'),
+  cpRVal: document.getElementById('cpRVal'),
+  cpGVal: document.getElementById('cpGVal'),
+  cpBVal: document.getElementById('cpBVal'),
+  cpHVal: document.getElementById('cpHVal'),
+  cpSVal: document.getElementById('cpSVal'),
+  cpVVal: document.getElementById('cpVVal'),
   hexGradient2Input: document.getElementById('hexGradient2Input'),
   hexGradient2Apply: document.getElementById('hexGradient2Apply'),
   corner:       document.getElementById('cornerRadius'),
@@ -709,9 +715,12 @@ function syncUI() {
   const _r = parseInt(cfg.frameColor.slice(1,3),16);
   const _g = parseInt(cfg.frameColor.slice(3,5),16);
   const _b = parseInt(cfg.frameColor.slice(5,7),16);
-  if (els.cpR && document.activeElement !== els.cpR) els.cpR.value = _r;
-  if (els.cpG && document.activeElement !== els.cpG) els.cpG.value = _g;
-  if (els.cpB && document.activeElement !== els.cpB) els.cpB.value = _b;
+  if (els.cpR) els.cpR.value = _r;
+  if (els.cpG) els.cpG.value = _g;
+  if (els.cpB) els.cpB.value = _b;
+  if (els.cpRVal) els.cpRVal.textContent = _r;
+  if (els.cpGVal) els.cpGVal.textContent = _g;
+  if (els.cpBVal) els.cpBVal.textContent = _b;
   // RGB → HSV
   const r1=_r/255, g1=_g/255, b1=_b/255;
   const cmax=Math.max(r1,g1,b1), cmin=Math.min(r1,g1,b1), d=cmax-cmin;
@@ -719,9 +728,12 @@ function syncUI() {
   if(d>0){if(cmax===r1)_h=60*(((g1-b1)/d)%6);else if(cmax===g1)_h=60*((b1-r1)/d+2);else _h=60*((r1-g1)/d+4);}
   if(_h<0)_h+=360;
   const _s=cmax===0?0:d/cmax;
-  if (els.cpH && document.activeElement !== els.cpH) els.cpH.value = Math.round(_h);
-  if (els.cpS && document.activeElement !== els.cpS) els.cpS.value = Math.round(_s*100);
-  if (els.cpV && document.activeElement !== els.cpV) els.cpV.value = Math.round(cmax*100);
+  if (els.cpH) els.cpH.value = Math.round(_h);
+  if (els.cpS) els.cpS.value = Math.round(_s*100);
+  if (els.cpV) els.cpV.value = Math.round(cmax*100);
+  if (els.cpHVal) els.cpHVal.textContent = Math.round(_h) + '°';
+  if (els.cpSVal) els.cpSVal.textContent = Math.round(_s*100) + '%';
+  if (els.cpVVal) els.cpVVal.textContent = Math.round(cmax*100) + '%';
   els.colorSwatches.forEach(sw => sw.classList.toggle('active', sw.dataset.color === cfg.frameColor));
   // 阴影开关
   els.shadowToggle.textContent = cfg.shadowOn ? '开启' : '关闭';
