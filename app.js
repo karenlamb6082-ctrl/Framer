@@ -99,6 +99,7 @@ const els = {
   customColor:  document.getElementById('customColor'),
   hexColorInput: document.getElementById('hexColorInput'),
   hexApplyBtn:   document.getElementById('hexApplyBtn'),
+  hexPreview:    document.getElementById('hexPreview'),
   hexGradient2Input: document.getElementById('hexGradient2Input'),
   hexGradient2Apply: document.getElementById('hexGradient2Apply'),
   corner:       document.getElementById('cornerRadius'),
@@ -661,6 +662,7 @@ function syncUI() {
   // 颜色
   els.customColor.value = cfg.frameColor;
   if (els.hexColorInput) els.hexColorInput.value = cfg.frameColor.slice(1).toUpperCase();
+  if (els.hexPreview) els.hexPreview.style.background = cfg.frameColor;
   els.colorSwatches.forEach(sw => sw.classList.toggle('active', sw.dataset.color === cfg.frameColor));
   // 阴影开关
   els.shadowToggle.textContent = cfg.shadowOn ? '开启' : '关闭';

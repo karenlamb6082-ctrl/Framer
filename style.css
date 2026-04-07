@@ -505,8 +505,14 @@ body {
 .hex-input-row {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 4px;
   margin-top: 8px;
+}
+.hex-preview {
+  width: 16px; height: 16px;
+  border: 1px solid var(--outline-variant);
+  border-radius: 2px;
+  flex-shrink: 0;
 }
 .hex-label {
   color: var(--on-surface-muted);
