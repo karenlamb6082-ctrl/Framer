@@ -872,9 +872,19 @@ function render() {
     ctx.fill();
     ctx.restore();
   } else if (ft === 'color-card') {
-    // 色卡：主色填充 + 文字标注
+    // 色卡：主色填充（支持渐变） + 文字标注
     const dColor = cfg.dominantColor || cfg.frameColor;
-    ctx.fillStyle = dColor;
+    if (cfg.gradientOn) {
+      const isLR = cfg.colorCardLayout === 'lr';
+      const grad = isLR
+        ? ctx.createLinearGradient(0, 0, canvasW, 0)
+        : ctx.createLinearGradient(0, 0, 0, canvasH);
+      grad.addColorStop(0, dColor);
+      grad.addColorStop(1, cfg.gradientColor2);
+      ctx.fillStyle = grad;
+    } else {
+      ctx.fillStyle = dColor;
+    }
     ctx.fillRect(0, 0, canvasW, canvasH);
     // 色卡文字
     const label = cfg.colorCardText || getColorName(dColor);
