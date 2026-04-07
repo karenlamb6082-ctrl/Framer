@@ -527,6 +527,17 @@ body {
 }
 .hex-input:focus { outline: none; border-color: var(--primary); }
 .hex-input::placeholder { color: var(--on-surface-muted); opacity: 0.4; }
+.hex-apply-btn {
+  background: var(--surface);
+  color: var(--on-surface-muted);
+  border: 1px solid var(--outline-variant);
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--font);
+  transition: all var(--transition);
+}
+.hex-apply-btn:hover { color: var(--primary); border-color: var(--primary); }
 
 /* 渐变 */
 .gradient-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; }

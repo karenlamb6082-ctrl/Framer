@@ -98,6 +98,9 @@ const els = {
   colorSwatches: document.querySelectorAll('.color-swatch'),
   customColor:  document.getElementById('customColor'),
   hexColorInput: document.getElementById('hexColorInput'),
+  hexApplyBtn:   document.getElementById('hexApplyBtn'),
+  hexGradient2Input: document.getElementById('hexGradient2Input'),
+  hexGradient2Apply: document.getElementById('hexGradient2Apply'),
   corner:       document.getElementById('cornerRadius'),
   cornerVal:    document.getElementById('cornerVal'),
   photoScale:   document.getElementById('photoScale'),
@@ -286,10 +289,9 @@ function bindControlEvents() {
     syncUI(); scheduleRender();
   };
 
-  // HEX 色值输入
-  els.hexColorInput.addEventListener('input', (e) => {
-    let v = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
-    e.target.value = v;
+  // HEX 色值输入 —— 主色
+  const applyHexColor = () => {
+    const v = els.hexColorInput.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
     if (v.length === 6) {
       const hex = '#' + v;
       const updates = { frameColor: hex };
@@ -299,7 +301,28 @@ function bindControlEvents() {
       els.customColor.value = hex;
       syncUI(); scheduleRender();
     }
+  };
+  els.hexColorInput.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
   });
+  els.hexColorInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyHexColor(); });
+  els.hexApplyBtn.onclick = applyHexColor;
+
+  // HEX 色值输入 —— 渐变第二色
+  const applyHexGradient2 = () => {
+    const v = els.hexGradient2Input.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
+    if (v.length === 6) {
+      const hex = '#' + v;
+      updateActiveConfig({ gradientColor2: hex });
+      els.gradientColor2.value = hex;
+      syncUI(); scheduleRender();
+    }
+  };
+  els.hexGradient2Input.addEventListener('input', (e) => {
+    e.target.value = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
+  });
+  els.hexGradient2Input.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyHexGradient2(); });
+  els.hexGradient2Apply.onclick = applyHexGradient2;
 
   // 取色器
   els.btnEyedropper.onclick = () => {
@@ -657,6 +680,7 @@ function syncUI() {
   els.gradientToggle.textContent = cfg.gradientOn ? '渐变 开' : '渐变';
   els.gradientColor2Wrap.hidden = !cfg.gradientOn;
   els.gradientColor2.value = cfg.gradientColor2;
+  if (els.hexGradient2Input) els.hexGradient2Input.value = cfg.gradientColor2.slice(1).toUpperCase();
   // 胶片颗粒
   els.grainToggle.textContent = cfg.grainOn ? '开启' : '关闭';
   els.grainToggle.classList.toggle('on', cfg.grainOn);
