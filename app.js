@@ -97,6 +97,7 @@ const els = {
   widthVal:     document.getElementById('widthVal'),
   colorSwatches: document.querySelectorAll('.color-swatch'),
   customColor:  document.getElementById('customColor'),
+  hexColorInput: document.getElementById('hexColorInput'),
   corner:       document.getElementById('cornerRadius'),
   cornerVal:    document.getElementById('cornerVal'),
   photoScale:   document.getElementById('photoScale'),
@@ -284,6 +285,21 @@ function bindControlEvents() {
     updateActiveConfig(updates);
     syncUI(); scheduleRender();
   };
+
+  // HEX 色值输入
+  els.hexColorInput.addEventListener('input', (e) => {
+    let v = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
+    e.target.value = v;
+    if (v.length === 6) {
+      const hex = '#' + v;
+      const updates = { frameColor: hex };
+      const item = getActiveItem();
+      if (item && item.config.frameType === 'color-card') updates.dominantColor = hex;
+      updateActiveConfig(updates);
+      els.customColor.value = hex;
+      syncUI(); scheduleRender();
+    }
+  });
 
   // 取色器
   els.btnEyedropper.onclick = () => {
@@ -621,6 +637,7 @@ function syncUI() {
   els.shadowIntensity.value = cfg.shadowIntensity;
   // 颜色
   els.customColor.value = cfg.frameColor;
+  if (els.hexColorInput) els.hexColorInput.value = cfg.frameColor.slice(1).toUpperCase();
   els.colorSwatches.forEach(sw => sw.classList.toggle('active', sw.dataset.color === cfg.frameColor));
   // 阴影开关
   els.shadowToggle.textContent = cfg.shadowOn ? '开启' : '关闭';
