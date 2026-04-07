@@ -698,6 +698,16 @@ function render() {
   const pR = Math.min(drawnW, drawnH) / 2 * cfg.cornerRadius / 50;
   const minBorder = Math.min(bT, bR, bB, bL);
 
+  // 辅助：用圆角路径填充矩形（当 pR > 0 时使用圆角，否则退化为直角）
+  const fillRoundRect = (cx, cy, cw, ch, cr) => {
+    if (cr > 0) {
+      roundRectPath(ctx, cx, cy, cw, ch, cr);
+      ctx.fill();
+    } else {
+      ctx.fillRect(cx, cy, cw, ch);
+    }
+  };
+
   // ---- 渐变填充辅助 ----
   const getBorderFill = () => {
     if (cfg.gradientOn) {
@@ -714,9 +724,14 @@ function render() {
   // =========================================
   const ft = cfg.frameType;
 
-  // 通用辅助：绘制 45° 卡纸斜切压痕（四边内凹渐变阴影）
+  // 通用辅助：绘制 45° 卡纸斜切压痕（四边内凹渐变阴影，支持圆角裁剪）
   const drawMatBevel = (x, y, w, h, depth, alpha) => {
     ctx.save();
+    // 当照片有圆角时，bevel 区域也需要圆角裁剪，避免直角阴影溢出
+    if (pR > 0) {
+      roundRectPath(ctx, x, y, w, h, pR);
+      ctx.clip();
+    }
     // 上
     const tG = ctx.createLinearGradient(x, y, x, y + depth);
     tG.addColorStop(0, `rgba(0,0,0,${alpha})`);
@@ -750,10 +765,11 @@ function render() {
     ctx.fillRect(0, 0, canvasW, canvasH);
     // 黑墙微弱纹理
     applyGrain(ctx, 0, 0, canvasW, canvasH, 0.015);
-    // 冷白卡纸面（占边框面积的大部分）
+    // 冷白卡纸面（占边框面积的大部分，跟随圆角）
     const matPad = Math.max(12, Math.round(minBorder * 0.45));
+    const matR = pR > 0 ? pR + matPad * 0.5 : 0;
     ctx.fillStyle = '#F2F1EF';
-    ctx.fillRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2);
+    fillRoundRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2, matR);
     // 卡纸纸面纹理（较重，可见的纸纤维感）
     applyGrain(ctx, drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2, 0.03);
     // 微弱暖色径向渐变（模拟灯光下纸面色温差异）
@@ -787,14 +803,15 @@ function render() {
     ctx.fillStyle = wG;
     ctx.fillRect(0, 0, canvasW, canvasH);
     ctx.restore();
-    // 白色内层卡纸（面积更大，有实体感）
+    // 白色内层卡纸（面积更大，有实体感，跟随圆角）
     const innerPad = Math.max(10, Math.round(minBorder * 0.4));
+    const innerR = pR > 0 ? pR + innerPad * 0.4 : 0;
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.12)';
     ctx.shadowBlur = Math.max(12, Math.round(minBorder * 0.15));
     ctx.shadowOffsetY = Math.round(ctx.shadowBlur * 0.3);
     ctx.fillStyle = '#FEFEFE';
-    ctx.fillRect(drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2);
+    fillRoundRect(drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2, innerR);
     ctx.restore();
     // 内层纸面纹理
     applyGrain(ctx, drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2, 0.02);
@@ -806,7 +823,7 @@ function render() {
     // 深灰双色调 + 光影分层（无线框）
     ctx.fillStyle = '#2A2A2A';
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 内层深色面板
+    // 内层深色面板（editorial 内层不紧邻照片，保持直角即可；但照片区域附近需要处理）
     const innerPad = Math.max(2, Math.round(minBorder * 0.15));
     ctx.fillStyle = '#1A1A1A';
     ctx.fillRect(innerPad, innerPad, canvasW - innerPad * 2, canvasH - innerPad * 2);
@@ -842,12 +859,14 @@ function render() {
     ctx.shadowColor = 'rgba(0,0,0,0.65)';
     ctx.shadowBlur = Math.max(50, Math.round(Math.min(drawnW, drawnH) * 0.22));
     ctx.fillStyle = 'rgba(0,0,0,0.40)';
-    ctx.fillRect(sX, sY, sW, sH);
+    // 悬浮阴影也跟随圆角
+    fillRoundRect(sX, sY, sW, sH, pR > 0 ? pR * shadowScale : 0);
     ctx.restore();
-    // 白色承载面（有一定厚度感）
+    // 白色承载面（有一定厚度感，跟随圆角）
     const framePad = Math.max(3, Math.round(Math.min(drawnW, drawnH) * 0.012));
+    const floatR = pR > 0 ? pR + framePad * 0.3 : 0;
     ctx.fillStyle = '#FFFFFF';
-    ctx.fillRect(drawX - framePad, drawY - framePad, drawnW + framePad * 2, drawnH + framePad * 2);
+    fillRoundRect(drawX - framePad, drawY - framePad, drawnW + framePad * 2, drawnH + framePad * 2, floatR);
     // 白色面纹理
     applyGrain(ctx, drawX - framePad, drawY - framePad, drawnW + framePad * 2, drawnH + framePad * 2, 0.012);
 
@@ -866,14 +885,15 @@ function render() {
     ctx.fillStyle = ivG;
     ctx.fillRect(0, 0, canvasW, canvasH);
     ctx.restore();
-    // 白色承载卡纸（面积更大）
+    // 白色承载卡纸（面积更大，跟随圆角）
     const innerPad = Math.max(8, Math.round(minBorder * 0.3));
+    const ivoryR = pR > 0 ? pR + innerPad * 0.4 : 0;
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.06)';
     ctx.shadowBlur = Math.max(6, Math.round(minBorder * 0.08));
     ctx.shadowOffsetY = 2;
     ctx.fillStyle = '#FFFEF8';
-    ctx.fillRect(drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2);
+    fillRoundRect(drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2, ivoryR);
     ctx.restore();
     applyGrain(ctx, drawX - innerPad, drawY - innerPad, drawnW + innerPad * 2, drawnH + innerPad * 2, 0.018);
     // 斜切过渡
@@ -886,10 +906,11 @@ function render() {
     ctx.fillRect(0, 0, canvasW, canvasH);
     // 暗房墙面纹理（更重）
     applyGrain(ctx, 0, 0, canvasW, canvasH, 0.025);
-    // 纯黑内裱层（面积加大）
+    // 纯黑内裱层（面积加大，跟随圆角）
     const matPad = Math.max(4, Math.round(Math.min(drawnW, drawnH) * 0.018));
+    const darkR = pR > 0 ? pR + matPad * 0.3 : 0;
     ctx.fillStyle = '#050505';
-    ctx.fillRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2);
+    fillRoundRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2, darkR);
     // 边缘氧化带（更宽）
     ctx.save();
     ctx.globalAlpha = 0.08;
@@ -933,23 +954,25 @@ function render() {
     const outerDepth = Math.max(10, Math.round(minBorder * 0.12));
     drawMatBevel(0, 0, canvasW, canvasH, outerDepth, 0.06);
     ctx.restore();
-    // 中间凹槽卡纸层（面积更大）
+    // 中间凹槽卡纸层（面积更大，跟随圆角）
     const matPad = Math.max(12, Math.round(minBorder * 0.45));
+    const smR = pR > 0 ? pR + matPad * 0.5 : 0;
     ctx.fillStyle = '#E2DFDB';
-    ctx.fillRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2);
+    fillRoundRect(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2, smR);
     // 凹槽纸面纹理
     applyGrain(ctx, drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2, 0.028);
     // 重度内凹阴影 — 更深更明显
     const insetDepth = Math.max(14, Math.round(matPad * 0.65));
     drawMatBevel(drawX - matPad, drawY - matPad, drawnW + matPad * 2, drawnH + matPad * 2, insetDepth, 0.25);
-    // 白色底座（有厚度感）
+    // 白色底座（有厚度感，跟随圆角）
     const basePad = Math.max(3, Math.round(matPad * 0.18));
+    const baseR = pR > 0 ? pR + basePad * 0.3 : 0;
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.18)';
     ctx.shadowBlur = Math.max(14, Math.round(matPad * 0.5));
     ctx.shadowOffsetY = Math.round(ctx.shadowBlur * 0.2);
     ctx.fillStyle = '#FDFDFD';
-    ctx.fillRect(drawX - basePad, drawY - basePad, drawnW + basePad * 2, drawnH + basePad * 2);
+    fillRoundRect(drawX - basePad, drawY - basePad, drawnW + basePad * 2, drawnH + basePad * 2, baseR);
     ctx.restore();
     applyGrain(ctx, drawX - basePad, drawY - basePad, drawnW + basePad * 2, drawnH + basePad * 2, 0.012);
 
