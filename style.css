@@ -545,18 +545,36 @@ body {
 }
 .hex-apply-btn:hover { color: var(--primary); border-color: var(--primary); }
 
-/* 颜色参数显示 */
-.color-info {
+/* 颜色参数输入 */
+.color-params { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.color-param-group {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 2px;
+}
+.color-param-group label {
+  color: var(--on-surface-muted);
   font-size: 10px;
   font-family: 'Courier New', monospace;
-  color: var(--on-surface-muted);
-  letter-spacing: 0.03em;
+  width: 12px;
+  text-align: right;
+  flex-shrink: 0;
 }
-.color-info-sep { opacity: 0.3; }
+.color-param-input {
+  width: 38px;
+  background: var(--surface);
+  color: var(--on-surface);
+  border: 1px solid var(--outline-variant);
+  padding: 2px 4px;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.color-param-input::-webkit-inner-spin-button,
+.color-param-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.color-param-input:focus { outline: none; border-color: var(--primary); }
 
 /* 渐变 */
 .gradient-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; }

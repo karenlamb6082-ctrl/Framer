@@ -102,6 +102,12 @@ const els = {
   hexPreview:    document.getElementById('hexPreview'),
   colorInfoRGB:  document.getElementById('colorInfoRGB'),
   colorInfoHSV:  document.getElementById('colorInfoHSV'),
+  cpR: document.getElementById('cpR'),
+  cpG: document.getElementById('cpG'),
+  cpB: document.getElementById('cpB'),
+  cpH: document.getElementById('cpH'),
+  cpS: document.getElementById('cpS'),
+  cpV: document.getElementById('cpV'),
   hexGradient2Input: document.getElementById('hexGradient2Input'),
   hexGradient2Apply: document.getElementById('hexGradient2Apply'),
   corner:       document.getElementById('cornerRadius'),
@@ -310,6 +316,40 @@ function bindControlEvents() {
   });
   els.hexColorInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyHexColor(); });
   els.hexApplyBtn.onclick = applyHexColor;
+
+  // RGB 输入框实时调色
+  const applyRGB = () => {
+    const r = Math.min(255, Math.max(0, parseInt(els.cpR.value)||0));
+    const g = Math.min(255, Math.max(0, parseInt(els.cpG.value)||0));
+    const b = Math.min(255, Math.max(0, parseInt(els.cpB.value)||0));
+    const hex = '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+    const updates = { frameColor: hex };
+    const item = getActiveItem();
+    if (item && item.config.frameType === 'color-card') updates.dominantColor = hex;
+    updateActiveConfig(updates);
+    syncUI(); scheduleRender();
+  };
+  [els.cpR, els.cpG, els.cpB].forEach(el => { if(el) el.addEventListener('input', applyRGB); });
+
+  // HSV 输入框实时调色
+  const applyHSV = () => {
+    const h = Math.min(360, Math.max(0, parseInt(els.cpH.value)||0));
+    const s = Math.min(100, Math.max(0, parseInt(els.cpS.value)||0)) / 100;
+    const v = Math.min(100, Math.max(0, parseInt(els.cpV.value)||0)) / 100;
+    // HSV → RGB
+    const c = v * s, x = c * (1 - Math.abs((h/60)%2 - 1)), m = v - c;
+    let r1=0,g1=0,b1=0;
+    if(h<60){r1=c;g1=x;} else if(h<120){r1=x;g1=c;} else if(h<180){g1=c;b1=x;}
+    else if(h<240){g1=x;b1=c;} else if(h<300){r1=x;b1=c;} else{r1=c;b1=x;}
+    const r=Math.round((r1+m)*255), g=Math.round((g1+m)*255), b=Math.round((b1+m)*255);
+    const hex = '#' + [r,g,b].map(v2 => v2.toString(16).padStart(2,'0')).join('');
+    const updates = { frameColor: hex };
+    const item = getActiveItem();
+    if (item && item.config.frameType === 'color-card') updates.dominantColor = hex;
+    updateActiveConfig(updates);
+    syncUI(); scheduleRender();
+  };
+  [els.cpH, els.cpS, els.cpV].forEach(el => { if(el) el.addEventListener('input', applyHSV); });
 
   // HEX 色值输入 —— 渐变第二色
   const applyHexGradient2 = () => {
@@ -665,25 +705,23 @@ function syncUI() {
   els.customColor.value = cfg.frameColor;
   if (els.hexColorInput) els.hexColorInput.value = cfg.frameColor.slice(1).toUpperCase();
   if (els.hexPreview) els.hexPreview.style.background = cfg.frameColor;
-  // 颜色参数显示
-  if (els.colorInfoRGB && els.colorInfoHSV) {
-    const rr = parseInt(cfg.frameColor.slice(1,3),16);
-    const gg = parseInt(cfg.frameColor.slice(3,5),16);
-    const bb = parseInt(cfg.frameColor.slice(5,7),16);
-    els.colorInfoRGB.textContent = `R ${rr}  G ${gg}  B ${bb}`;
-    // RGB → HSV
-    const r1 = rr/255, g1 = gg/255, b1 = bb/255;
-    const cmax = Math.max(r1,g1,b1), cmin = Math.min(r1,g1,b1), d = cmax - cmin;
-    let h = 0;
-    if (d > 0) {
-      if (cmax === r1) h = 60*(((g1-b1)/d)%6);
-      else if (cmax === g1) h = 60*((b1-r1)/d+2);
-      else h = 60*((r1-g1)/d+4);
-    }
-    if (h < 0) h += 360;
-    const s = cmax === 0 ? 0 : d/cmax;
-    els.colorInfoHSV.textContent = `H ${Math.round(h)}°  S ${Math.round(s*100)}%  V ${Math.round(cmax*100)}%`;
-  }
+  // RGB/HSV 参数输入框同步
+  const _r = parseInt(cfg.frameColor.slice(1,3),16);
+  const _g = parseInt(cfg.frameColor.slice(3,5),16);
+  const _b = parseInt(cfg.frameColor.slice(5,7),16);
+  if (els.cpR && document.activeElement !== els.cpR) els.cpR.value = _r;
+  if (els.cpG && document.activeElement !== els.cpG) els.cpG.value = _g;
+  if (els.cpB && document.activeElement !== els.cpB) els.cpB.value = _b;
+  // RGB → HSV
+  const r1=_r/255, g1=_g/255, b1=_b/255;
+  const cmax=Math.max(r1,g1,b1), cmin=Math.min(r1,g1,b1), d=cmax-cmin;
+  let _h=0;
+  if(d>0){if(cmax===r1)_h=60*(((g1-b1)/d)%6);else if(cmax===g1)_h=60*((b1-r1)/d+2);else _h=60*((r1-g1)/d+4);}
+  if(_h<0)_h+=360;
+  const _s=cmax===0?0:d/cmax;
+  if (els.cpH && document.activeElement !== els.cpH) els.cpH.value = Math.round(_h);
+  if (els.cpS && document.activeElement !== els.cpS) els.cpS.value = Math.round(_s*100);
+  if (els.cpV && document.activeElement !== els.cpV) els.cpV.value = Math.round(cmax*100);
   els.colorSwatches.forEach(sw => sw.classList.toggle('active', sw.dataset.color === cfg.frameColor));
   // 阴影开关
   els.shadowToggle.textContent = cfg.shadowOn ? '开启' : '关闭';

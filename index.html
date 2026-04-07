@@ -175,10 +175,17 @@
         <input type="text" class="hex-input" id="hexColorInput" maxlength="6" placeholder="FFFFFF" spellcheck="false">
         <button class="hex-apply-btn" id="hexApplyBtn">确定</button>
       </div>
-      <div class="color-info" id="colorInfo">
-        <span id="colorInfoRGB">R 255 G 255 B 255</span>
-        <span class="color-info-sep">|</span>
-        <span id="colorInfoHSV">H 0° S 0% V 100%</span>
+      <div class="color-params" id="colorParams">
+        <div class="color-param-group">
+          <label>R</label><input type="number" class="color-param-input" id="cpR" min="0" max="255" value="255">
+          <label>G</label><input type="number" class="color-param-input" id="cpG" min="0" max="255" value="255">
+          <label>B</label><input type="number" class="color-param-input" id="cpB" min="0" max="255" value="255">
+        </div>
+        <div class="color-param-group">
+          <label>H</label><input type="number" class="color-param-input" id="cpH" min="0" max="360" value="0">
+          <label>S</label><input type="number" class="color-param-input" id="cpS" min="0" max="100" value="0">
+          <label>V</label><input type="number" class="color-param-input" id="cpV" min="0" max="100" value="100">
+        </div>
       </div>
 
       <div class="gradient-row" id="gradientRow">
