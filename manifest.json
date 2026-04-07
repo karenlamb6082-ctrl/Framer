@@ -1,16 +1,22 @@
 {
-  "name": "Framer - 高级照片边框编辑器",
+  "name": "Framer - 高级照片呈现编辑器",
   "short_name": "Framer",
-  "description": "专业照片边框编辑器，支持多种预设边框、滤镜、水印，纯浏览器端处理",
+  "description": "专业照片呈现编辑器，6种现代化空间呈现预设，纯浏览器端处理",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f0f11",
-  "theme_color": "#7c6bff",
+  "background_color": "#0a0a0a",
+  "theme_color": "#131313",
   "icons": [
     {
-      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%237c6bff'/><rect x='15' y='15' width='70' height='70' rx='8' fill='%230f0f11'/><rect x='25' y='25' width='50' height='50' rx='4' fill='%23c4bbff'/></svg>",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ]
