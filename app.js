@@ -771,10 +771,11 @@ function render() {
   ctx.clearRect(0, 0, canvasW, canvasH);
 
   // ---- 准备照片参数 ----
-  const drawnW = (ft === 'color-card') ? photoW : photoW * cfg.photoScale;
-  const drawnH = (ft === 'color-card') ? photoH : photoH * cfg.photoScale;
-  const drawX = (ft === 'color-card') ? photoX : photoX + (photoW - drawnW) / 2 + cfg.photoOffsetX;
-  const drawY = (ft === 'color-card') ? photoY : photoY + (photoH - drawnH) / 2 + cfg.photoOffsetY;
+  const isCC = cfg.frameType === 'color-card';
+  const drawnW = isCC ? photoW : photoW * cfg.photoScale;
+  const drawnH = isCC ? photoH : photoH * cfg.photoScale;
+  const drawX = isCC ? photoX : photoX + (photoW - drawnW) / 2 + cfg.photoOffsetX;
+  const drawY = isCC ? photoY : photoY + (photoH - drawnH) / 2 + cfg.photoOffsetY;
   const pR = Math.min(drawnW, drawnH) / 2 * cfg.cornerRadius / 50;
   const minBorder = Math.min(bT, bR, bB, bL);
 
