@@ -25,12 +25,12 @@ const MAX_HISTORY = 40;
 // 6种全新呈现预设（The Breathing Image 设计系统）
 // ================================
 const PRESET_CONFIGS = {
-  'air':        { bg: '#f9f9f7', spacing: 18, grainOn: false },
-  'soft-paper': { bg: '#f2f4f2', spacing: 14, grainOn: false },
-  'float':      { bg: '#ecefec', spacing: 12, grainOn: false },
-  'archive':    { bg: '#f9f9f7', spacing: 14, grainOn: false },
-  'mist':       { bg: '#f2f4f2', spacing: 16, grainOn: false },
-  'ink-space':  { bg: '#2d3432', spacing: 12, grainOn: false },
+  'air':        { bg: '#ffffff', spacing: 18, grainOn: false },
+  'soft-paper': { bg: '#f5f5f5', spacing: 14, grainOn: false },
+  'float':      { bg: '#e0e0e0', spacing: 12, grainOn: false },
+  'archive':    { bg: '#ffffff', spacing: 14, grainOn: false },
+  'mist':       { bg: '#f5f5f5', spacing: 16, grainOn: false },
+  'ink-space':  { bg: '#000000', spacing: 12, grainOn: false },
 };
 
 // 默认配置生成器
@@ -41,7 +41,7 @@ const createDefaultConfig = (preset = 'air') => {
     frameWidth:   pc.spacing,
     frameColor:   pc.bg,
     gradientOn:   false,
-    gradientColor2: '#f2f4f2',
+    gradientColor2: '#e0e0e0',
     aspectRatio:  'original',
     cornerRadius: 0,
     photoScale:   1.0,
@@ -721,14 +721,16 @@ function render() {
     ctx.fillStyle = getBgFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
     applyGrain(ctx, 0, 0, canvasW, canvasH, 0.04);
-    // 浅白纸页层（比照片略大，仅靠色差分离）
+    // 浅白纸页层（比照片略大，仅靠色差分离，适配圆角）
     const paperPad = Math.max(8, Math.round(Math.min(drawnW, drawnH) * 0.04));
+    const paperRadius = pR > 0 ? pR + paperPad : 0;
     ctx.save();
     ctx.shadowColor = 'rgba(45,52,50,0.04)';
     ctx.shadowBlur = 40;
     ctx.shadowOffsetY = 4;
-    ctx.fillStyle = '#f9f9f7';
-    ctx.fillRect(drawX - paperPad, drawY - paperPad, drawnW + paperPad * 2, drawnH + paperPad * 2);
+    ctx.fillStyle = '#ffffff';
+    roundRectPath(ctx, drawX - paperPad, drawY - paperPad, drawnW + paperPad * 2, drawnH + paperPad * 2, paperRadius);
+    ctx.fill();
     ctx.restore();
     applyGrain(ctx, drawX - paperPad, drawY - paperPad, drawnW + paperPad * 2, drawnH + paperPad * 2, 0.02);
 
@@ -736,24 +738,27 @@ function render() {
     // 悬浮：中灰背景 + 大面积弥散投影，图片无包裹
     ctx.fillStyle = getBgFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 大面积弥散投影
+    // 大面积弥散投影（适配圆角）
     ctx.save();
     const shadowOffY = Math.round(Math.min(drawnW, drawnH) * 0.03);
     ctx.shadowColor = 'rgba(45,52,50,0.07)';
     ctx.shadowBlur = Math.max(40, Math.round(Math.min(drawnW, drawnH) * 0.06));
     ctx.shadowOffsetY = shadowOffY;
     ctx.fillStyle = 'rgba(45,52,50,0.03)';
-    ctx.fillRect(drawX, drawY, drawnW, drawnH);
+    roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
+    ctx.fill();
     ctx.restore();
 
   } else if (ft === 'archive') {
     // 档案：白色背景 + 极薄色阶分离层
     ctx.fillStyle = getBgFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 极薄色阶边界（非线框，是色差暗示）
+    // 极薄色阶边界（非线框，是色差暗示，适配圆角）
     const archivePad = Math.max(1, Math.round(Math.min(drawnW, drawnH) * 0.003));
-    ctx.fillStyle = '#e5e9e6';
-    ctx.fillRect(drawX - archivePad, drawY - archivePad, drawnW + archivePad * 2, drawnH + archivePad * 2);
+    const archiveRadius = pR > 0 ? pR + archivePad : 0;
+    ctx.fillStyle = '#e0e0e0';
+    roundRectPath(ctx, drawX - archivePad, drawY - archivePad, drawnW + archivePad * 2, drawnH + archivePad * 2, archiveRadius);
+    ctx.fill();
 
   } else if (ft === 'mist') {
     // 迷雾：背景 + 纹理，图片溶解效果在照片绘制后处理
@@ -766,12 +771,15 @@ function render() {
     ctx.fillStyle = getBgFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
     applyGrain(ctx, 0, 0, canvasW, canvasH, 0.012);
-    // 图片区域极微弱白色内发光（像远处灯光）
+    // 图片区域极微弱白色内发光（适配圆角）
     ctx.save();
     ctx.shadowColor = 'rgba(255,255,255,0.04)';
     ctx.shadowBlur = Math.max(15, Math.round(Math.min(drawnW, drawnH) * 0.025));
     ctx.fillStyle = 'rgba(255,255,255,0.015)';
-    ctx.fillRect(drawX - 2, drawY - 2, drawnW + 4, drawnH + 4);
+    const glowPad = 2;
+    const glowRadius = pR > 0 ? pR + glowPad : 0;
+    roundRectPath(ctx, drawX - glowPad, drawY - glowPad, drawnW + glowPad * 2, drawnH + glowPad * 2, glowRadius);
+    ctx.fill();
     ctx.restore();
   }
 
@@ -779,16 +787,21 @@ function render() {
   // 3. 边缘特效层（通用：溶解/光晕）
   // =========================================
   
-  // 环境光晕 (Outer Glow)
+  // 环境光晕 (Outer Glow) — 使用画布外偏移技术：载体绘制在远处，仅阴影扩散可见
   if (cfg.photoStrokeOn && cfg.photoStrokeColor === 'rgba(255,255,255,0.7)' && cfg.photoStrokeWidth > 0) {
     ctx.save();
     const dynamicBase = Math.max(canvasW, canvasH);
     const blurRadius = Math.round(dynamicBase * cfg.photoStrokeWidth / 200);
-    const isDark = ['gallery-black', 'floating', 'darkroom'].includes(ft);
-    ctx.shadowColor = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)';
+    const isDark = ['ink-space'].includes(ft);
+    // 偏移量：将载体绘制在画布右侧远处
+    const offsetX = canvasW + 10000;
+    ctx.shadowColor = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.18)';
     ctx.shadowBlur = blurRadius;
-    ctx.fillStyle = isDark ? 'rgba(255,255,255,1)' : 'rgba(0,0,0,1)';
-    roundRectPath(ctx, drawX, drawY, drawnW, drawnH, pR);
+    ctx.shadowOffsetX = -offsetX;  // 阴影向左偏移回正确位置
+    ctx.shadowOffsetY = 0;
+    ctx.fillStyle = isDark ? '#ffffff' : '#000000';
+    // 载体绘制在 drawX + offsetX（画布外），阴影出现在 drawX（画布内）
+    roundRectPath(ctx, drawX + offsetX, drawY, drawnW, drawnH, pR);
     ctx.fill();
     ctx.restore();
   }

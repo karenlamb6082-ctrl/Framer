@@ -329,7 +329,7 @@ body {
 
 /* 6种呈现预设缩略图 */
 .frame-thumb--air {
-  background: #f9f9f7; padding: 8px;
+  background: #ffffff; padding: 8px;
 }
 .frame-thumb--air .frame-thumb-inner {
   display: flex; align-items: center; justify-content: center;
@@ -340,10 +340,10 @@ body {
 }
 
 .frame-thumb--soft-paper {
-  background: #f2f4f2; padding: 4px;
+  background: #f5f5f5; padding: 4px;
 }
 .frame-thumb--soft-paper .frame-thumb-inner {
-  background: #f9f9f7; padding: 3px;
+  background: #ffffff; padding: 3px;
   box-shadow: 0 1px 4px rgba(45,52,50,0.04);
   display: flex; align-items: center; justify-content: center;
 }
@@ -353,7 +353,7 @@ body {
 }
 
 .frame-thumb--float {
-  background: #ecefec; padding: 5px;
+  background: #e0e0e0; padding: 5px;
 }
 .frame-thumb--float .frame-thumb-inner {
   display: flex; align-items: center; justify-content: center;
@@ -365,10 +365,10 @@ body {
 }
 
 .frame-thumb--archive {
-  background: #f9f9f7; padding: 3px 4px 8px;
+  background: #ffffff; padding: 3px 4px 8px;
 }
 .frame-thumb--archive .frame-thumb-inner {
-  background: #e5e9e6; padding: 1px;
+  background: #e0e0e0; padding: 1px;
   display: flex; align-items: flex-start; justify-content: center;
 }
 .frame-thumb--archive .frame-thumb-inner::after {
@@ -377,7 +377,7 @@ body {
 }
 
 .frame-thumb--mist {
-  background: #f2f4f2; padding: 3px;
+  background: #f5f5f5; padding: 3px;
 }
 .frame-thumb--mist .frame-thumb-inner {
   display: flex; align-items: center; justify-content: center;
@@ -385,7 +385,7 @@ body {
 }
 
 .frame-thumb--ink-space {
-  background: #2d3432; padding: 5px;
+  background: #000000; padding: 5px;
 }
 .frame-thumb--ink-space .frame-thumb-inner {
   display: flex; align-items: center; justify-content: center;
