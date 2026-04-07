@@ -100,6 +100,8 @@ const els = {
   hexColorInput: document.getElementById('hexColorInput'),
   hexApplyBtn:   document.getElementById('hexApplyBtn'),
   hexPreview:    document.getElementById('hexPreview'),
+  colorInfoRGB:  document.getElementById('colorInfoRGB'),
+  colorInfoHSV:  document.getElementById('colorInfoHSV'),
   hexGradient2Input: document.getElementById('hexGradient2Input'),
   hexGradient2Apply: document.getElementById('hexGradient2Apply'),
   corner:       document.getElementById('cornerRadius'),
@@ -663,6 +665,25 @@ function syncUI() {
   els.customColor.value = cfg.frameColor;
   if (els.hexColorInput) els.hexColorInput.value = cfg.frameColor.slice(1).toUpperCase();
   if (els.hexPreview) els.hexPreview.style.background = cfg.frameColor;
+  // 颜色参数显示
+  if (els.colorInfoRGB && els.colorInfoHSV) {
+    const rr = parseInt(cfg.frameColor.slice(1,3),16);
+    const gg = parseInt(cfg.frameColor.slice(3,5),16);
+    const bb = parseInt(cfg.frameColor.slice(5,7),16);
+    els.colorInfoRGB.textContent = `R ${rr}  G ${gg}  B ${bb}`;
+    // RGB → HSV
+    const r1 = rr/255, g1 = gg/255, b1 = bb/255;
+    const cmax = Math.max(r1,g1,b1), cmin = Math.min(r1,g1,b1), d = cmax - cmin;
+    let h = 0;
+    if (d > 0) {
+      if (cmax === r1) h = 60*(((g1-b1)/d)%6);
+      else if (cmax === g1) h = 60*((b1-r1)/d+2);
+      else h = 60*((r1-g1)/d+4);
+    }
+    if (h < 0) h += 360;
+    const s = cmax === 0 ? 0 : d/cmax;
+    els.colorInfoHSV.textContent = `H ${Math.round(h)}°  S ${Math.round(s*100)}%  V ${Math.round(cmax*100)}%`;
+  }
   els.colorSwatches.forEach(sw => sw.classList.toggle('active', sw.dataset.color === cfg.frameColor));
   // 阴影开关
   els.shadowToggle.textContent = cfg.shadowOn ? '开启' : '关闭';

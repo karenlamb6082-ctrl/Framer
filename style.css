@@ -545,6 +545,19 @@ body {
 }
 .hex-apply-btn:hover { color: var(--primary); border-color: var(--primary); }
 
+/* 颜色参数显示 */
+.color-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 10px;
+  font-family: 'Courier New', monospace;
+  color: var(--on-surface-muted);
+  letter-spacing: 0.03em;
+}
+.color-info-sep { opacity: 0.3; }
+
 /* 渐变 */
 .gradient-row { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
 .gradient-color2 { display: flex; align-items: center; gap: 6px; }
