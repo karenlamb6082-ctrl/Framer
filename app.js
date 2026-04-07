@@ -755,20 +755,9 @@ function render() {
     ctx.restore();
 
   } else if (ft === 'archive') {
-    // 档案：白色背景 + 极薄色阶分离层
+    // 档案：纯净背景 + 偏上布局（0.7顶/1.7底），无额外装饰层
     ctx.fillStyle = getBgFill();
     ctx.fillRect(0, 0, canvasW, canvasH);
-    // 极薄色阶边界（非线框，是色差暗示，适配圆角）
-    const archivePad = Math.max(1, Math.round(Math.min(drawnW, drawnH) * 0.003));
-    const archiveRadius = pR > 0 ? pR + archivePad : 0;
-    // 色阶色 = 背景色稍暗（自适应）
-    const _fc2 = cfg.frameColor;
-    const _ar = Math.max(0, parseInt(_fc2.slice(1,3), 16) - 15);
-    const _ag = Math.max(0, parseInt(_fc2.slice(3,5), 16) - 15);
-    const _ab = Math.max(0, parseInt(_fc2.slice(5,7), 16) - 15);
-    ctx.fillStyle = `rgb(${_ar},${_ag},${_ab})`;
-    roundRectPath(ctx, drawX - archivePad, drawY - archivePad, drawnW + archivePad * 2, drawnH + archivePad * 2, archiveRadius);
-    ctx.fill();
 
   } else if (ft === 'mist') {
     // 迷雾：背景 + 纹理，图片溶解效果在照片绘制后处理
