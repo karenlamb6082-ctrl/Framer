@@ -728,7 +728,12 @@ function render() {
     ctx.shadowColor = 'rgba(45,52,50,0.04)';
     ctx.shadowBlur = 40;
     ctx.shadowOffsetY = 4;
-    ctx.fillStyle = '#ffffff';
+    // 纸页色 = 背景色稍亮（自适应，避免硬编码白色在深色背景下暴露）
+    const _fc1 = cfg.frameColor;
+    const _pr = Math.min(255, parseInt(_fc1.slice(1,3), 16) + 20);
+    const _pg = Math.min(255, parseInt(_fc1.slice(3,5), 16) + 20);
+    const _pb = Math.min(255, parseInt(_fc1.slice(5,7), 16) + 20);
+    ctx.fillStyle = `rgb(${_pr},${_pg},${_pb})`;
     roundRectPath(ctx, drawX - paperPad, drawY - paperPad, drawnW + paperPad * 2, drawnH + paperPad * 2, paperRadius);
     ctx.fill();
     ctx.restore();
@@ -756,7 +761,12 @@ function render() {
     // 极薄色阶边界（非线框，是色差暗示，适配圆角）
     const archivePad = Math.max(1, Math.round(Math.min(drawnW, drawnH) * 0.003));
     const archiveRadius = pR > 0 ? pR + archivePad : 0;
-    ctx.fillStyle = '#e0e0e0';
+    // 色阶色 = 背景色稍暗（自适应）
+    const _fc2 = cfg.frameColor;
+    const _ar = Math.max(0, parseInt(_fc2.slice(1,3), 16) - 15);
+    const _ag = Math.max(0, parseInt(_fc2.slice(3,5), 16) - 15);
+    const _ab = Math.max(0, parseInt(_fc2.slice(5,7), 16) - 15);
+    ctx.fillStyle = `rgb(${_ar},${_ag},${_ab})`;
     roundRectPath(ctx, drawX - archivePad, drawY - archivePad, drawnW + archivePad * 2, drawnH + archivePad * 2, archiveRadius);
     ctx.fill();
 
