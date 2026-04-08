@@ -1143,10 +1143,11 @@ body {
 
   /* 面板内容 — 独立滚动 */
   .panel {
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 12px 14px 20px;
-    max-height: calc(100vh - var(--topbar-h) - 38vh - 52px);
+    padding: 12px 14px 24px;
   }
 
   /* 状态栏隐藏 */
