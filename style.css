@@ -1101,8 +1101,7 @@ body {
     top: calc(var(--topbar-h) + 38vh);
     bottom: 0;
     width: 100%;
-    height: auto;
-    max-height: none;
+    display: flex;
     padding: 0;
     flex-direction: column;
     z-index: 80;
