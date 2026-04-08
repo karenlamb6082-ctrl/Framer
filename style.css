@@ -1067,7 +1067,7 @@ body {
     left: 0;
     top: var(--topbar-h);
     bottom: auto;
-    height: 38vh;
+    height: 28vh;
     z-index: 1;
   }
   .canvas-wrap {
@@ -1098,7 +1098,7 @@ body {
   .sidebar {
     position: fixed;
     left: 0; right: 0;
-    top: calc(var(--topbar-h) + 38vh);
+    top: calc(var(--topbar-h) + 28vh);
     bottom: 0;
     width: 100%;
     display: flex;
@@ -1146,7 +1146,7 @@ body {
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
-    padding: 12px 14px 24px;
+    padding: 12px 14px 60px;
   }
 
   /* 状态栏隐藏 */
