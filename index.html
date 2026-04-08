@@ -163,14 +163,8 @@
 
     <!-- ===== 面板区域：配色 ===== -->
     <div class="panel-content" id="panelColor" hidden>
-      <div class="panel-label">背景色调</div>
-      <div class="color-row">
-        <div class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></div>
-        <div class="color-swatch" style="background:#f5f5f5" data-color="#f5f5f5"></div>
-        <div class="color-swatch" style="background:#e0e0e0" data-color="#e0e0e0"></div>
-        <div class="color-swatch" style="background:#9e9e9e" data-color="#9e9e9e"></div>
-        <div class="color-swatch" style="background:#333333" data-color="#333333"></div>
-        <div class="color-swatch" style="background:#000000" data-color="#000000"></div>
+      <div class="panel-label">自定义</div>
+      <div class="color-tools-row">
         <input type="color" class="color-custom" id="customColor" value="#ffffff">
         <button class="btn-eyedropper" id="btnEyedropper" title="从照片取色">
           <span class="material-symbols-outlined">colorize</span>
@@ -183,17 +177,197 @@
         <button class="hex-apply-btn" id="hexApplyBtn">确定</button>
       </div>
 
-      <div class="panel-label">渐变背景</div>
-      <div class="gradient-row" id="gradientRow">
-        <button class="btn-toggle" id="gradientToggle">渐变</button>
-        <div class="gradient-color2" id="gradientColor2Wrap" hidden>
-          <span class="slider-label">第二色</span>
-          <input type="color" class="color-custom" id="gradientColor2" value="#e0e0e0">
-          <span class="hex-label">#</span>
-          <input type="text" class="hex-input" id="hexGradient2Input" maxlength="6" placeholder="E0E0E0" spellcheck="false">
-          <button class="hex-apply-btn" id="hexGradient2Apply">确定</button>
+      <div class="panel-label">色系</div>
+      <div class="color-palette" id="colorPalette">
+        <div class="color-group">
+          <div class="color-group-label">经典灰阶</div>
+          <div class="color-group-swatches">
+            <div class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></div>
+            <div class="color-swatch" style="background:#f5f5f5" data-color="#f5f5f5"></div>
+            <div class="color-swatch" style="background:#e0e0e0" data-color="#e0e0e0"></div>
+            <div class="color-swatch" style="background:#9e9e9e" data-color="#9e9e9e"></div>
+            <div class="color-swatch" style="background:#333333" data-color="#333333"></div>
+            <div class="color-swatch" style="background:#000000" data-color="#000000"></div>
+          </div>
+        </div>
+        <div class="color-group">
+          <div class="color-group-label">暖调·米杏</div>
+          <div class="color-group-swatches">
+            <div class="color-swatch" style="background:#faf8f5" data-color="#faf8f5"></div>
+            <div class="color-swatch" style="background:#f0ebe3" data-color="#f0ebe3"></div>
+            <div class="color-swatch" style="background:#e6d5c3" data-color="#e6d5c3"></div>
+            <div class="color-swatch" style="background:#c4a882" data-color="#c4a882"></div>
+            <div class="color-swatch" style="background:#8b6f4e" data-color="#8b6f4e"></div>
+            <div class="color-swatch" style="background:#5c4033" data-color="#5c4033"></div>
+          </div>
+        </div>
+        <div class="color-group">
+          <div class="color-group-label">冷调·雾蓝</div>
+          <div class="color-group-swatches">
+            <div class="color-swatch" style="background:#f0f4f8" data-color="#f0f4f8"></div>
+            <div class="color-swatch" style="background:#d9e2ec" data-color="#d9e2ec"></div>
+            <div class="color-swatch" style="background:#bcccdc" data-color="#bcccdc"></div>
+            <div class="color-swatch" style="background:#829ab1" data-color="#829ab1"></div>
+            <div class="color-swatch" style="background:#627d98" data-color="#627d98"></div>
+            <div class="color-swatch" style="background:#334e68" data-color="#334e68"></div>
+          </div>
+        </div>
+        <div class="color-group">
+          <div class="color-group-label">莫兰迪</div>
+          <div class="color-group-swatches">
+            <div class="color-swatch" style="background:#e8e0d8" data-color="#e8e0d8"></div>
+            <div class="color-swatch" style="background:#c9b8a8" data-color="#c9b8a8"></div>
+            <div class="color-swatch" style="background:#b8a898" data-color="#b8a898"></div>
+            <div class="color-swatch" style="background:#a09080" data-color="#a09080"></div>
+            <div class="color-swatch" style="background:#787068" data-color="#787068"></div>
+            <div class="color-swatch" style="background:#605850" data-color="#605850"></div>
+          </div>
+        </div>
+        <div class="color-group">
+          <div class="color-group-label">自然·草木</div>
+          <div class="color-group-swatches">
+            <div class="color-swatch" style="background:#f5f7f0" data-color="#f5f7f0"></div>
+            <div class="color-swatch" style="background:#e0e8d0" data-color="#e0e8d0"></div>
+            <div class="color-swatch" style="background:#b5c99a" data-color="#b5c99a"></div>
+            <div class="color-swatch" style="background:#87a96b" data-color="#87a96b"></div>
+            <div class="color-swatch" style="background:#5c7a48" data-color="#5c7a48"></div>
+            <div class="color-swatch" style="background:#3d5028" data-color="#3d5028"></div>
+          </div>
+        </div>
+        <div class="color-group">
+          <div class="color-group-label">胶片·暗调</div>
+          <div class="color-group-swatches">
+            <div class="color-swatch" style="background:#2b2d42" data-color="#2b2d42"></div>
+            <div class="color-swatch" style="background:#1a1a2e" data-color="#1a1a2e"></div>
+            <div class="color-swatch" style="background:#16213e" data-color="#16213e"></div>
+            <div class="color-swatch" style="background:#0f3460" data-color="#0f3460"></div>
+            <div class="color-swatch" style="background:#533483" data-color="#533483"></div>
+            <div class="color-swatch" style="background:#121212" data-color="#121212"></div>
+          </div>
+        </div>
+        <div class="color-group">
+          <div class="color-group-label">中国传统色</div>
+          <div class="color-group-swatches">
+            <div class="color-swatch" style="background:#f0e8e6" data-color="#f0e8e6" title="月白"></div>
+            <div class="color-swatch" style="background:#c83c23" data-color="#c83c23" title="朱砂"></div>
+            <div class="color-swatch" style="background:#9b1e23" data-color="#9b1e23" title="胭脂"></div>
+            <div class="color-swatch" style="background:#2e7d9b" data-color="#2e7d9b" title="石青"></div>
+            <div class="color-swatch" style="background:#425b6d" data-color="#425b6d" title="黛色"></div>
+            <div class="color-swatch" style="background:#395260" data-color="#395260" title="鸦青"></div>
+          </div>
         </div>
       </div>
+
+      <div class="panel-label">渐变背景</div>
+      <div class="gradient-section">
+        <button class="btn-toggle" id="gradientToggle">渐变</button>
+        <div class="gradient-controls" id="gradientColor2Wrap" hidden>
+          <!-- 渐变预览条 -->
+          <div class="gradient-preview-bar" id="gradientPreviewBar"></div>
+
+          <!-- 渐变方向九宫格 -->
+          <div class="panel-sublabel">方向</div>
+          <div class="gradient-dir-grid" id="gradientDirGrid">
+            <button class="dir-btn" data-angle="315" title="左下→右上">↗</button>
+            <button class="dir-btn" data-angle="270" title="下→上">↑</button>
+            <button class="dir-btn" data-angle="225" title="右下→左上">↖</button>
+            <button class="dir-btn active" data-angle="0" title="左→右">→</button>
+            <button class="dir-btn dir-btn-center" data-angle="radial" title="径向渐变">●</button>
+            <button class="dir-btn" data-angle="180" title="右→左">←</button>
+            <button class="dir-btn" data-angle="45" title="左上→右下">↘</button>
+            <button class="dir-btn" data-angle="90" title="上→下">↓</button>
+            <button class="dir-btn" data-angle="135" title="右上→左下">↙</button>
+          </div>
+
+          <!-- 第一色 -->
+          <div class="panel-sublabel">色彩</div>
+          <div class="gradient-color-pick">
+            <span class="gradient-color-dot" id="gradColor1Dot" style="background:#ffffff"></span>
+            <span class="slider-label">色 1</span>
+            <span class="slider-label" style="margin-left:auto;opacity:0.5" id="gradColor1Hex">#FFFFFF</span>
+          </div>
+
+          <!-- 第二色 HSL 滑块 -->
+          <div class="gradient-color-group">
+            <div class="gradient-color-header">
+              <input type="color" class="color-custom" id="gradientColor2" value="#e0e0e0">
+              <span class="slider-label">色 2</span>
+              <span class="slider-label grad-hex-label" id="grad2HexLabel">#E0E0E0</span>
+            </div>
+            <div class="hsl-sliders">
+              <div class="hsl-row">
+                <span class="hsl-label">H</span>
+                <input type="range" class="slider hsl-hue" id="grad2Hue" min="0" max="360" value="0">
+                <span class="hsl-val" id="grad2HueVal">0°</span>
+              </div>
+              <div class="hsl-row">
+                <span class="hsl-label">S</span>
+                <input type="range" class="slider hsl-sat" id="grad2Sat" min="0" max="100" value="0">
+                <span class="hsl-val" id="grad2SatVal">0%</span>
+              </div>
+              <div class="hsl-row">
+                <span class="hsl-label">L</span>
+                <input type="range" class="slider hsl-lit" id="grad2Lit" min="0" max="100" value="88">
+                <span class="hsl-val" id="grad2LitVal">88%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 第三色（可选） -->
+          <div class="gradient-color-group">
+            <div class="gradient-color-header">
+              <button class="btn-toggle btn-toggle-sm" id="gradColor3Toggle">+ 色 3</button>
+            </div>
+            <div class="gradient-color3-controls" id="gradColor3Wrap" hidden>
+              <div class="gradient-color-header">
+                <input type="color" class="color-custom" id="gradientColor3" value="#a0a0a0">
+                <span class="slider-label">色 3</span>
+                <span class="slider-label grad-hex-label" id="grad3HexLabel">#A0A0A0</span>
+              </div>
+              <div class="hsl-sliders">
+                <div class="hsl-row">
+                  <span class="hsl-label">H</span>
+                  <input type="range" class="slider hsl-hue" id="grad3Hue" min="0" max="360" value="0">
+                  <span class="hsl-val" id="grad3HueVal">0°</span>
+                </div>
+                <div class="hsl-row">
+                  <span class="hsl-label">S</span>
+                  <input type="range" class="slider hsl-sat" id="grad3Sat" min="0" max="100" value="0">
+                  <span class="hsl-val" id="grad3SatVal">0%</span>
+                </div>
+                <div class="hsl-row">
+                  <span class="hsl-label">L</span>
+                  <input type="range" class="slider hsl-lit" id="grad3Lit" min="0" max="100" value="63">
+                  <span class="hsl-val" id="grad3LitVal">63%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 渐变预设 -->
+          <div class="panel-sublabel">预设</div>
+          <div class="gradient-presets" id="gradientPresets">
+            <button class="gradient-preset-btn" data-c1="#ffecd2" data-c2="#fcb69f" data-c3="" title="晨曦"
+              style="background:linear-gradient(to right,#ffecd2,#fcb69f)"></button>
+            <button class="gradient-preset-btn" data-c1="#a18cd1" data-c2="#fbc2eb" data-c3="" title="薄暮"
+              style="background:linear-gradient(to right,#a18cd1,#fbc2eb)"></button>
+            <button class="gradient-preset-btn" data-c1="#e0eafc" data-c2="#cfdef3" data-c3="" title="冰川"
+              style="background:linear-gradient(to right,#e0eafc,#cfdef3)"></button>
+            <button class="gradient-preset-btn" data-c1="#232526" data-c2="#414345" data-c3="" title="墨韵"
+              style="background:linear-gradient(to right,#232526,#414345)"></button>
+            <button class="gradient-preset-btn" data-c1="#11998e" data-c2="#38ef7d" data-c3="" title="翡翠"
+              style="background:linear-gradient(to right,#11998e,#38ef7d)"></button>
+            <button class="gradient-preset-btn" data-c1="#2c3e50" data-c2="#4ca1af" data-c3="" title="暮色"
+              style="background:linear-gradient(to right,#2c3e50,#4ca1af)"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 取色器浮动预览气泡 -->
+    <div id="pickerTooltip" class="picker-tooltip" hidden>
+      <span class="picker-tooltip-swatch" id="pickerTooltipSwatch"></span>
+      <span class="picker-tooltip-hex" id="pickerTooltipHex">#FFFFFF</span>
     </div>
 
     <!-- ===== 面板区域：比例 ===== -->

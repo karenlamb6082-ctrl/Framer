@@ -4,6 +4,37 @@
  */
 
 // ================================
+// HSL / HEX 转换工具
+// ================================
+function hexToHsl(hex) {
+  let r = parseInt(hex.slice(1,3),16)/255;
+  let g = parseInt(hex.slice(3,5),16)/255;
+  let b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h=0, s=0, l=(max+min)/2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    if (max===r) h = ((g-b)/d + (g<b?6:0))/6;
+    else if (max===g) h = ((b-r)/d+2)/6;
+    else h = ((r-g)/d+4)/6;
+  }
+  return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+}
+function hslToHex(h, s, l) {
+  h /= 360; s /= 100; l /= 100;
+  let r,g,b;
+  if (s === 0) { r=g=b=l; } else {
+    const hue2rgb = (p,q,t) => { if(t<0)t+=1; if(t>1)t-=1; if(t<1/6)return p+(q-p)*6*t; if(t<1/2)return q; if(t<2/3)return p+(q-p)*(2/3-t)*6; return p; };
+    const q = l < 0.5 ? l*(1+s) : l+s-l*s;
+    const p = 2*l - q;
+    r = hue2rgb(p,q,h+1/3); g = hue2rgb(p,q,h); b = hue2rgb(p,q,h-1/3);
+  }
+  return '#' + [r,g,b].map(x => Math.round(x*255).toString(16).padStart(2,'0')).join('');
+}
+
+
+// ================================
 // 状态树
 // ================================
 const state = {
@@ -44,6 +75,9 @@ const createDefaultConfig = (preset = 'air') => {
     frameColor:   pc.bg,
     gradientOn:   false,
     gradientColor2: '#e0e0e0',
+    gradientAngle: 0,
+    gradientType: 'linear',
+    gradientColor3: '',
     aspectRatio:  'original',
     cornerRadius: 0,
     photoScale:   1.0,
@@ -95,7 +129,7 @@ const els = {
   strokeColorOptions: document.getElementById('strokeColorOptions'),
   frameWidth:   document.getElementById('frameWidth'),
   widthVal:     document.getElementById('widthVal'),
-  colorSwatches: document.querySelectorAll('.color-swatch'),
+  colorSwatches: null, // 延迟获取，兼容分组色板
   customColor:  document.getElementById('customColor'),
   hexColorInput: document.getElementById('hexColorInput'),
   hexApplyBtn:   document.getElementById('hexApplyBtn'),
@@ -122,6 +156,10 @@ const els = {
   grainSliderWrap: document.getElementById('grainSliderWrap'),
   // 取色器
   btnEyedropper: document.getElementById('btnEyedropper'),
+  // 取色器预览气泡
+  pickerTooltip: document.getElementById('pickerTooltip'),
+  pickerTooltipSwatch: document.getElementById('pickerTooltipSwatch'),
+  pickerTooltipHex: document.getElementById('pickerTooltipHex'),
   // 色卡
   colorCardOptions: document.getElementById('colorCardOptions'),
   ccLayoutLR: document.getElementById('ccLayoutLR'),
@@ -274,7 +312,10 @@ function bindControlEvents() {
   };
 
   // 颜色
-  els.colorSwatches.forEach(sw => sw.onclick = () => {
+  // 色板事件委托（兼容分组色板的所有 .color-swatch）
+  document.addEventListener('click', (e) => {
+    const sw = e.target.closest('.color-swatch');
+    if (!sw || !sw.dataset.color) return;
     const updates = { frameColor: sw.dataset.color };
     const item = getActiveItem();
     if (item && item.config.frameType === 'color-card') updates.dominantColor = sw.dataset.color;
@@ -309,21 +350,23 @@ function bindControlEvents() {
   els.hexColorInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyHexColor(); });
   els.hexApplyBtn.onclick = applyHexColor;
 
-  // HEX 色值输入 —— 渐变第二色
-  const applyHexGradient2 = () => {
-    const v = els.hexGradient2Input.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
-    if (v.length === 6) {
-      const hex = '#' + v;
-      updateActiveConfig({ gradientColor2: hex });
-      els.gradientColor2.value = hex;
-      syncUI(); scheduleRender();
-    }
-  };
-  els.hexGradient2Input.addEventListener('input', (e) => {
-    e.target.value = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
-  });
-  els.hexGradient2Input.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyHexGradient2(); });
-  els.hexGradient2Apply.onclick = applyHexGradient2;
+  // HEX 色值输入 —— 渐变第二色（如果存在旧版HEX输入）
+  if (els.hexGradient2Input) {
+    const applyHexGradient2 = () => {
+      const v = els.hexGradient2Input.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
+      if (v.length === 6) {
+        const hex = '#' + v;
+        updateActiveConfig({ gradientColor2: hex });
+        els.gradientColor2.value = hex;
+        syncUI(); scheduleRender();
+      }
+    };
+    els.hexGradient2Input.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/[^0-9a-fA-F]/g, '').slice(0, 6);
+    });
+    els.hexGradient2Input.addEventListener('keydown', (e) => { if (e.key === 'Enter') applyHexGradient2(); });
+    if (els.hexGradient2Apply) els.hexGradient2Apply.onclick = applyHexGradient2;
+  }
 
   // 取色器
   els.btnEyedropper.onclick = () => {
@@ -331,7 +374,40 @@ function bindControlEvents() {
     state.pickingColor = !state.pickingColor;
     els.canvasWrap.classList.toggle('picking', state.pickingColor);
     els.btnEyedropper.classList.toggle('on', state.pickingColor);
+    // 退出时隐藏预览气泡
+    if (!state.pickingColor && els.pickerTooltip) {
+      els.pickerTooltip.hidden = true;
+    }
   };
+
+  // 取色器：实时预览（mousemove 读取 canvas 像素）
+  let pickerRafId = null;
+  els.canvas.addEventListener('mousemove', (e) => {
+    if (!state.pickingColor || !els.pickerTooltip) return;
+    if (pickerRafId) return; // RAF 节流
+    pickerRafId = requestAnimationFrame(() => {
+      pickerRafId = null;
+      const rect = els.canvas.getBoundingClientRect();
+      const x = Math.round((e.clientX - rect.left) * (els.canvas.width / rect.width));
+      const y = Math.round((e.clientY - rect.top) * (els.canvas.height / rect.height));
+      if (x < 0 || y < 0 || x >= els.canvas.width || y >= els.canvas.height) return;
+      const pixel = els.ctx.getImageData(x, y, 1, 1).data;
+      const hex = '#' + [pixel[0], pixel[1], pixel[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+      // 更新气泡
+      els.pickerTooltip.hidden = false;
+      els.pickerTooltipSwatch.style.background = hex;
+      els.pickerTooltipHex.textContent = hex.toUpperCase();
+      // 定位：光标右下方偏移
+      els.pickerTooltip.style.left = (e.clientX + 16) + 'px';
+      els.pickerTooltip.style.top = (e.clientY + 16) + 'px';
+    });
+  });
+  // 鼠标离开画布时隐藏气泡
+  els.canvas.addEventListener('mouseleave', () => {
+    if (els.pickerTooltip) els.pickerTooltip.hidden = true;
+  });
+
+  // 取色器：点击确认
   els.canvas.addEventListener('click', (e) => {
     if (!state.pickingColor) return;
     const rect = els.canvas.getBoundingClientRect();
@@ -347,6 +423,7 @@ function bindControlEvents() {
     state.pickingColor = false;
     els.canvasWrap.classList.remove('picking');
     els.btnEyedropper.classList.remove('on');
+    if (els.pickerTooltip) els.pickerTooltip.hidden = true;
     syncUI(); scheduleRender();
   });
 
@@ -436,8 +513,87 @@ function bindControlEvents() {
   };
   els.gradientColor2.oninput = (e) => {
     updateActiveConfig({ gradientColor2: e.target.value });
-    scheduleRender();
+    syncUI(); scheduleRender();
   };
+
+  // 色2 HSL 滑块
+  const g2Hue = document.getElementById('grad2Hue');
+  const g2Sat = document.getElementById('grad2Sat');
+  const g2Lit = document.getElementById('grad2Lit');
+  const updateGrad2FromHSL = () => {
+    const hex = hslToHex(+g2Hue.value, +g2Sat.value, +g2Lit.value);
+    updateActiveConfig({ gradientColor2: hex });
+    syncUI(); scheduleRender();
+  };
+  if (g2Hue) g2Hue.oninput = updateGrad2FromHSL;
+  if (g2Sat) g2Sat.oninput = updateGrad2FromHSL;
+  if (g2Lit) g2Lit.oninput = updateGrad2FromHSL;
+
+  // 渐变方向九宫格
+  const dirGrid = document.getElementById('gradientDirGrid');
+  if (dirGrid) {
+    dirGrid.addEventListener('click', (e) => {
+      const btn = e.target.closest('.dir-btn');
+      if (!btn) return;
+      const angle = btn.dataset.angle;
+      if (angle === 'radial') {
+        updateActiveConfig({ gradientType: 'radial' });
+      } else {
+        updateActiveConfig({ gradientType: 'linear', gradientAngle: parseInt(angle) });
+      }
+      syncUI(); scheduleRender();
+    });
+  }
+
+  // 第三色开关
+  const c3Toggle = document.getElementById('gradColor3Toggle');
+  const c3Wrap = document.getElementById('gradColor3Wrap');
+  const c3Input = document.getElementById('gradientColor3');
+  if (c3Toggle) {
+    c3Toggle.onclick = () => {
+      const item = getActiveItem();
+      if (!item) return;
+      const has3 = !!item.config.gradientColor3;
+      updateActiveConfig({ gradientColor3: has3 ? '' : '#a0a0a0' });
+      syncUI(); scheduleRender();
+    };
+  }
+  if (c3Input) {
+    c3Input.oninput = (e) => {
+      updateActiveConfig({ gradientColor3: e.target.value });
+      syncUI(); scheduleRender();
+    };
+  }
+  // 色3 HSL 滑块
+  const g3Hue = document.getElementById('grad3Hue');
+  const g3Sat = document.getElementById('grad3Sat');
+  const g3Lit = document.getElementById('grad3Lit');
+  const updateGrad3FromHSL = () => {
+    const hex = hslToHex(+g3Hue.value, +g3Sat.value, +g3Lit.value);
+    updateActiveConfig({ gradientColor3: hex });
+    syncUI(); scheduleRender();
+  };
+  if (g3Hue) g3Hue.oninput = updateGrad3FromHSL;
+  if (g3Sat) g3Sat.oninput = updateGrad3FromHSL;
+  if (g3Lit) g3Lit.oninput = updateGrad3FromHSL;
+
+  // 渐变预设
+  const presetsEl = document.getElementById('gradientPresets');
+  if (presetsEl) {
+    presetsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('.gradient-preset-btn');
+      if (!btn) return;
+      const updates = {
+        gradientOn: true,
+        frameColor: btn.dataset.c1,
+        gradientColor2: btn.dataset.c2,
+        gradientColor3: btn.dataset.c3 || '',
+      };
+      updateActiveConfig(updates);
+      els.customColor.value = btn.dataset.c1;
+      syncUI(); scheduleRender();
+    });
+  }
 
   // 胶片颗粒
   els.grainToggle.onclick = () => {
@@ -663,7 +819,7 @@ function syncUI() {
   els.customColor.value = cfg.frameColor;
   if (els.hexColorInput) els.hexColorInput.value = cfg.frameColor.slice(1).toUpperCase();
   if (els.hexPreview) els.hexPreview.style.background = cfg.frameColor;
-  els.colorSwatches.forEach(sw => sw.classList.toggle('active', sw.dataset.color === cfg.frameColor));
+  document.querySelectorAll('.color-swatch').forEach(sw => sw.classList.toggle('active', sw.dataset.color === cfg.frameColor));
   // 阴影开关
   els.shadowToggle.textContent = cfg.shadowOn ? '开启' : '关闭';
   els.shadowToggle.classList.toggle('on', cfg.shadowOn);
@@ -682,7 +838,68 @@ function syncUI() {
   els.gradientToggle.textContent = cfg.gradientOn ? '渐变 开' : '渐变';
   els.gradientColor2Wrap.hidden = !cfg.gradientOn;
   els.gradientColor2.value = cfg.gradientColor2;
-  if (els.hexGradient2Input) els.hexGradient2Input.value = cfg.gradientColor2.slice(1).toUpperCase();
+  // 色2 HSL 滑块同步
+  const [h2,s2,l2] = hexToHsl(cfg.gradientColor2);
+  const g2h = document.getElementById('grad2Hue');
+  const g2s = document.getElementById('grad2Sat');
+  const g2l = document.getElementById('grad2Lit');
+  if (g2h) { g2h.value = h2; document.getElementById('grad2HueVal').textContent = h2 + '°'; }
+  if (g2s) { g2s.value = s2; document.getElementById('grad2SatVal').textContent = s2 + '%'; }
+  if (g2l) { g2l.value = l2; document.getElementById('grad2LitVal').textContent = l2 + '%'; }
+  const g2hex = document.getElementById('grad2HexLabel');
+  if (g2hex) g2hex.textContent = cfg.gradientColor2.toUpperCase();
+  // 方向九宫格高亮
+  const dirBtns = document.querySelectorAll('.dir-btn');
+  dirBtns.forEach(btn => {
+    if (cfg.gradientType === 'radial') {
+      btn.classList.toggle('active', btn.dataset.angle === 'radial');
+    } else {
+      btn.classList.toggle('active', btn.dataset.angle === String(cfg.gradientAngle));
+    }
+  });
+  // 第三色同步
+  const c3Toggle = document.getElementById('gradColor3Toggle');
+  const c3Wrap = document.getElementById('gradColor3Wrap');
+  const c3Input = document.getElementById('gradientColor3');
+  if (c3Toggle) {
+    const has3 = !!cfg.gradientColor3;
+    c3Toggle.classList.toggle('on', has3);
+    c3Toggle.textContent = has3 ? '− 移除' : '+ 色 3';
+    if (c3Wrap) c3Wrap.hidden = !has3;
+    if (has3 && c3Input) c3Input.value = cfg.gradientColor3;
+    // 色3 HSL 滑块同步
+    if (has3 && cfg.gradientColor3) {
+      const [h3,s3,l3] = hexToHsl(cfg.gradientColor3);
+      const g3h = document.getElementById('grad3Hue');
+      const g3s = document.getElementById('grad3Sat');
+      const g3l = document.getElementById('grad3Lit');
+      if (g3h) { g3h.value = h3; document.getElementById('grad3HueVal').textContent = h3 + '°'; }
+      if (g3s) { g3s.value = s3; document.getElementById('grad3SatVal').textContent = s3 + '%'; }
+      if (g3l) { g3l.value = l3; document.getElementById('grad3LitVal').textContent = l3 + '%'; }
+      const g3hex = document.getElementById('grad3HexLabel');
+      if (g3hex) g3hex.textContent = cfg.gradientColor3.toUpperCase();
+    }
+  }
+  // 色 1 指示点
+  const grad1Dot = document.getElementById('gradColor1Dot');
+  const grad1Hex = document.getElementById('gradColor1Hex');
+  if (grad1Dot) grad1Dot.style.background = cfg.frameColor;
+  if (grad1Hex) grad1Hex.textContent = cfg.frameColor.toUpperCase();
+  // 渐变预览条实时更新
+  const previewBar = document.getElementById('gradientPreviewBar');
+  if (previewBar && cfg.gradientOn) {
+    const isRadial = cfg.gradientType === 'radial';
+    const c3 = cfg.gradientColor3;
+    if (isRadial) {
+      previewBar.style.background = c3
+        ? `radial-gradient(circle, ${cfg.frameColor}, ${cfg.gradientColor2}, ${c3})`
+        : `radial-gradient(circle, ${cfg.frameColor}, ${cfg.gradientColor2})`;
+    } else {
+      previewBar.style.background = c3
+        ? `linear-gradient(${cfg.gradientAngle}deg, ${cfg.frameColor}, ${cfg.gradientColor2}, ${c3})`
+        : `linear-gradient(${cfg.gradientAngle}deg, ${cfg.frameColor}, ${cfg.gradientColor2})`;
+    }
+  }
   // 胶片颗粒
   els.grainToggle.textContent = cfg.grainOn ? '开启' : '关闭';
   els.grainToggle.classList.toggle('on', cfg.grainOn);
@@ -822,15 +1039,37 @@ function render() {
   const pR = Math.min(drawnW, drawnH) / 2 * cfg.cornerRadius / 50;
   const minBorder = Math.min(bT, bR, bB, bL);
 
-  // ---- 渐变填充辅助 ----
+  // ---- 渐变填充辅助（支持角度/径向/三色） ----
   const getBgFill = () => {
-    if (cfg.gradientOn) {
-      const grad = ctx.createLinearGradient(0, 0, canvasW, canvasH);
-      grad.addColorStop(0, cfg.frameColor);
-      grad.addColorStop(1, cfg.gradientColor2);
-      return grad;
+    if (!cfg.gradientOn) return cfg.frameColor;
+    const c1 = cfg.frameColor;
+    const c2 = cfg.gradientColor2;
+    const c3 = cfg.gradientColor3;
+    let grad;
+    if (cfg.gradientType === 'radial') {
+      // 径向渐变：从中心向外
+      const cx = canvasW / 2, cy = canvasH / 2;
+      const maxR = Math.sqrt(canvasW * canvasW + canvasH * canvasH) / 2;
+      grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, maxR);
+    } else {
+      // 线性渐变：按角度计算起终点
+      const angle = (cfg.gradientAngle || 0) * Math.PI / 180;
+      const cx = canvasW / 2, cy = canvasH / 2;
+      const len = Math.sqrt(canvasW * canvasW + canvasH * canvasH) / 2;
+      const x1 = cx - Math.cos(angle) * len;
+      const y1 = cy - Math.sin(angle) * len;
+      const x2 = cx + Math.cos(angle) * len;
+      const y2 = cy + Math.sin(angle) * len;
+      grad = ctx.createLinearGradient(x1, y1, x2, y2);
     }
-    return cfg.frameColor;
+    grad.addColorStop(0, c1);
+    if (c3) {
+      grad.addColorStop(0.5, c2);
+      grad.addColorStop(1, c3);
+    } else {
+      grad.addColorStop(1, c2);
+    }
+    return grad;
   };
 
   // 辅助：解析 hex 颜色为 rgba
@@ -1345,6 +1584,9 @@ function syncAllConfigs() {
     item.config.frameColor   = src.frameColor;
     item.config.gradientOn   = src.gradientOn;
     item.config.gradientColor2 = src.gradientColor2;
+    item.config.gradientAngle  = src.gradientAngle;
+    item.config.gradientType   = src.gradientType;
+    item.config.gradientColor3 = src.gradientColor3;
     item.config.aspectRatio  = src.aspectRatio;
     item.config.cornerRadius = src.cornerRadius;
     item.config.shadowOn     = src.shadowOn;

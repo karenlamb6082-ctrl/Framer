@@ -3,7 +3,7 @@
  * 策略：网络优先（Network-First），确保每次上线都能即时更新
  * 网络不可用时回退到缓存，保证离线可用
  */
-const CACHE_NAME = 'framer-v4.1';
+const CACHE_NAME = 'framer-v5.4';
 const ASSETS = [
   '/',
   '/index.html',
