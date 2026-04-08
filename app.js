@@ -529,6 +529,19 @@ function bindControlEvents() {
   if (g2Sat) g2Sat.oninput = updateGrad2FromHSL;
   if (g2Lit) g2Lit.oninput = updateGrad2FromHSL;
 
+  const grad2HexIn = document.getElementById('grad2HexInput');
+  if (grad2HexIn) {
+    grad2HexIn.addEventListener('change', (e) => {
+      let val = e.target.value.trim().replace(/^#/, '');
+      if (/^[0-9A-Fa-f]{6}$/.test(val)) {
+        updateActiveConfig({ gradientColor2: '#' + val });
+        syncUI(); scheduleRender();
+      } else {
+        syncUI(); // revert to valid format
+      }
+    });
+  }
+
   // 渐变方向九宫格
   const dirGrid = document.getElementById('gradientDirGrid');
   if (dirGrid) {
@@ -576,6 +589,19 @@ function bindControlEvents() {
   if (g3Hue) g3Hue.oninput = updateGrad3FromHSL;
   if (g3Sat) g3Sat.oninput = updateGrad3FromHSL;
   if (g3Lit) g3Lit.oninput = updateGrad3FromHSL;
+
+  const grad3HexIn = document.getElementById('grad3HexInput');
+  if (grad3HexIn) {
+    grad3HexIn.addEventListener('change', (e) => {
+      let val = e.target.value.trim().replace(/^#/, '');
+      if (/^[0-9A-Fa-f]{6}$/.test(val)) {
+        updateActiveConfig({ gradientColor3: '#' + val });
+        syncUI(); scheduleRender();
+      } else {
+        syncUI(); // revert to valid format
+      }
+    });
+  }
 
   // 渐变预设
   const presetsEl = document.getElementById('gradientPresets');
@@ -846,8 +872,8 @@ function syncUI() {
   if (g2h) { g2h.value = h2; document.getElementById('grad2HueVal').textContent = h2 + '°'; }
   if (g2s) { g2s.value = s2; document.getElementById('grad2SatVal').textContent = s2 + '%'; }
   if (g2l) { g2l.value = l2; document.getElementById('grad2LitVal').textContent = l2 + '%'; }
-  const g2hex = document.getElementById('grad2HexLabel');
-  if (g2hex) g2hex.textContent = cfg.gradientColor2.toUpperCase();
+  const g2hex = document.getElementById('grad2HexInput');
+  if (g2hex && document.activeElement !== g2hex) g2hex.value = cfg.gradientColor2.slice(1).toUpperCase();
   // 方向九宫格高亮
   const dirBtns = document.querySelectorAll('.dir-btn');
   dirBtns.forEach(btn => {
@@ -876,8 +902,8 @@ function syncUI() {
       if (g3h) { g3h.value = h3; document.getElementById('grad3HueVal').textContent = h3 + '°'; }
       if (g3s) { g3s.value = s3; document.getElementById('grad3SatVal').textContent = s3 + '%'; }
       if (g3l) { g3l.value = l3; document.getElementById('grad3LitVal').textContent = l3 + '%'; }
-      const g3hex = document.getElementById('grad3HexLabel');
-      if (g3hex) g3hex.textContent = cfg.gradientColor3.toUpperCase();
+      const g3hex = document.getElementById('grad3HexInput');
+      if (g3hex && document.activeElement !== g3hex) g3hex.value = cfg.gradientColor3.slice(1).toUpperCase();
     }
   }
   // 色 1 指示点
