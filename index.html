@@ -68,6 +68,10 @@
         <span class="material-symbols-outlined">tune</span>
         <span>预设</span>
       </a>
+      <a class="nav-item" data-panel="panelColor">
+        <span class="material-symbols-outlined">palette</span>
+        <span>配色</span>
+      </a>
       <a class="nav-item" data-panel="panelRatio">
         <span class="material-symbols-outlined">crop</span>
         <span>比例</span>
@@ -155,7 +159,10 @@
         <span class="slider-val" id="widthVal">18%</span>
         <span class="slider-label">舒展</span>
       </div>
+    </div>
 
+    <!-- ===== 面板区域：配色 ===== -->
+    <div class="panel-content" id="panelColor" hidden>
       <div class="panel-label">背景色调</div>
       <div class="color-row">
         <div class="color-swatch active" style="background:#ffffff" data-color="#ffffff"></div>
@@ -176,6 +183,7 @@
         <button class="hex-apply-btn" id="hexApplyBtn">确定</button>
       </div>
 
+      <div class="panel-label">渐变背景</div>
       <div class="gradient-row" id="gradientRow">
         <button class="btn-toggle" id="gradientToggle">渐变</button>
         <div class="gradient-color2" id="gradientColor2Wrap" hidden>
