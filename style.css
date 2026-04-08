@@ -1143,6 +1143,7 @@ body {
   /* 面板内容 — 独立滚动 */
   .panel-content {
     flex: 1;
+    height: 0;
     min-height: 0;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
